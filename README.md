@@ -30,7 +30,8 @@ Noisy parts within PPG signals, shorter than a specified threshold, are reconstr
 
 ![200827502-2e7f4437-a5cd-4ee8-89f0-70c9e33fccd8](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/8cf57fa6-94fc-4906-b4c3-8416fffced4e)
 
-![Uploading rec.png…]()
+
+![rec](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/ef0ce7aa-ab34-4176-a0a3-9192c7bd94de)
 
 
 ## Peak Detection and IBI Extraction
