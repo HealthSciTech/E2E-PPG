@@ -16,8 +16,8 @@ The input raw PPG signal undergoes filtering to remove undesired frequencies. A 
 SQA involves identifying clean and noisy parts within PPG signals. Our SQA approach requires PPG signals in a fixed length, which necessitates segmenting the input signals. To this end, we apply a moving window segmentation technique, where the PPG signals are divided into overlapping segments, each spanning 30 seconds, by sliding a window over the signal. The SQA process includes PPG feature extraction and classification, employing a one-class support vector machine model to distinguish between "Reliable" and "Unreliable" segments.
 
 
+![Untitled](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/c0ffee6c-f7b5-4d27-9f34-34cb86a698b5)
 
-![shifting-seg (1)](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/ea79c65d-5ed8-475f-84fc-6083110c10f4)
 
 ![200823631-d6263da6-9c66-4181-913b-1fd1f907b489](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/f63e40d3-74b3-497b-ac91-dc940e669f03)
 
