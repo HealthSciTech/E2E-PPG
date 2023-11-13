@@ -4,7 +4,7 @@ Created on Mon Oct 31 16:07:50 2022
 
 @author: mofeli
 """
-
+# Import necessary libraries and modules
 import heartpy as hp
 import numpy as np
 from scipy import stats
@@ -15,7 +15,22 @@ import matplotlib.pyplot as plt
 import pickle
 import joblib
 
+# Function to segment the PPG signal into fixed-size segments
 def segmentation(ppg, ppg_x, sample_rate, method='shifting', segmentation_step=5):
+    """
+    Segments the PPG signal into fixed-size segments.
+    
+    Parameters:
+    - ppg (numpy.ndarray): PPG signal.
+    - ppg_x (list): Corresponding x values for the PPG signal.
+    - sample_rate (int): Sampling rate of the PPG signal.
+    - method (str): Segmentation method. Options: 'standard' or 'shifting'.
+    - segmentation_step (int): Size of the segmentation step in seconds.
+    
+    Returns:
+    - segments (list): List of PPG signal segments.
+    - segments_x (list): List of corresponding x values for the segments.
+    """
     
     segment_size=30*sample_rate
     segments = []
@@ -34,6 +49,7 @@ def segmentation(ppg, ppg_x, sample_rate, method='shifting', segmentation_step=5
     return segments, segments_x
 
 
+# Function to detect heart cycles in the PPG signal
 def heart_cycle_detection(sample_rate, upsampling_rate, sample):
     
     sampling_rate = sample_rate * upsampling_rate
@@ -69,6 +85,7 @@ def heart_cycle_detection(sample_rate, upsampling_rate, sample):
                 beats.append(beat)
     return beats
 
+# Function to extract features from PPG segments
 def feature_extraction(ppg_segment, sample_rate):
     
     def energy_hc(sample_beats):
@@ -133,26 +150,30 @@ def feature_extraction(ppg_segment, sample_rate):
     return features
 
 
+# Main function for PPG Signal Quality Assessment
 def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
     
-    # model and normalization scaler
+    # Load pre-trained model and normalization scaler
     scaler_filename = "Train_data_scaler.save"
     model_filename = 'OneClassSVM_model.sav'
     scaler = joblib.load(scaler_filename)
     model = pickle.load(open(model_filename, 'rb'))
     
-    # 5 sec segmentation step
+    # Set the segmentation step for 5 seconds
     segmentation_step = 5*sample_rate
     
+    # Generate x values for the PPG signal
     ppg_x = list(range(len(ppg_filtered)))
-    # Segmentation
+    
+    # Segmentation of the PPG signal
     segments, segments_x = segmentation(ppg_filtered, ppg_x, sample_rate, 'shifting', segmentation_step)
 
-    
+    # Initialize lists to store reliable and unreliable segments
     reliable_segments = []
     unreliable_segments = []
     reliable_segments_x = []
     unreliable_segments_x = []
+    # Loop through the segments for feature extraction and classification
     for i in range(len(segments)):
         
         # Feature extraction
@@ -165,6 +186,7 @@ def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
             features_norm  = scaler.transform([features])
             pred = model.predict(features_norm)
         
+        # Categorize segments based on classification result
         if pred == 0:
             reliable_segments.append(segments[i])
             reliable_segments_x.append(segments_x[i])
@@ -172,7 +194,7 @@ def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
             unreliable_segments.append(segments[i])
             unreliable_segments_x.append(segments_x[i])
             
-            
+    # Generate lists of reliable and unreliable x values        
     x_reliable = list(set([item for segment in reliable_segments_x for item in segment]))
     x_unreliable = [item for item in ppg_x if item not in x_reliable]
     
@@ -195,7 +217,7 @@ def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
     #                 gap.extend(x_reliable[gap[-1]:)
                                           
                                     
-                    
+    # Uncomment the following block for additional visualization           
     # if doPlot==True:
     #     x = range(len(ppg_filtered))
     #     # plt.plot(x,ppg_filt)
@@ -205,5 +227,5 @@ def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
     #         plt.axvspan(gaps[i][0], gaps[i][-1], color='red', alpha=0.5)
 #     plt.title(filename)
     
-    
+    # Return reliable x values and gaps
     return x_reliable, gaps
