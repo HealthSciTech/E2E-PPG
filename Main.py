@@ -11,7 +11,7 @@ from Clean_PPG_Extraction import clean_ppg_extraction
 from PPG_HRV_Extraction import PPG_HRV_Extraction
 import pandas as pd
 from scipy.signal import resample
-
+from PPG_Peak_Detection import peak_detection
 import heartpy as hp
 import numpy as np
 import os
@@ -65,13 +65,13 @@ clean_segments, start_timestamp_segments = clean_ppg_extraction(ppg_signal, gaps
 if len(clean_segments) == 0:
     print('No clean ' + str(window_length_min) + ' min ppg was detected in signal!')
 else:
-    ## PPg Peak detection
-    #segmentized_signal, indeces = PPG_Peak(np.asarray(ppg_cleans[0]), sample_rate, fc = cutoff, order = 4,
-    #                                       btype = 'bandpass', seconds = 15, overlap = 0, minlen = 15, doplot = False)
     # Print the number of clean segments found
     print(str(len(clean_segments)) + ' clean ' + str(window_length_min) + ' min ppg was detected in signal' )
+    
+    ## PPg Peak detection
+    peaks = peak_detection(clean_segments, sample_rate)
     # Perform HRV extraction
-    hrv_data = PPG_HRV_Extraction(clean_segments, start_timestamp_segments, sample_rate, window_length_min)
+    hrv_data = PPG_HRV_Extraction(clean_segments, start_timestamp_segments, peaks, sample_rate, window_length_min)
     
     # Save HRV data to a CSV file
     filename = 'HRV_' + file
