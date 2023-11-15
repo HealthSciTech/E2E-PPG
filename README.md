@@ -44,7 +44,16 @@ Noisy parts within PPG signals, shorter than a specified threshold, are reconstr
 
 ## Peak Detection and IBI Extraction
 Systolic peaks in PPG signals are identified using a deep-learning-based method with dilated Convolutional Neural Networks (CNN) architecture. PPG peak detection enables the extraction of IBI values that serve as the basis for obtaining HR and HRV. IBI represents the time duration between two consecutive heartbeats and is computed by measuring the time interval between systolic peaks within the PPG signals. 
+
+
+<img src="https://github.com/HealthSciTech/E2E-PPG/assets/67778755/5f1dce78-b1a5-4155-9400-744c71049648" alt="rec-arch" width="550" height="300">
+<br />
+<br />
+
+
 ![200779269-c0cfc80a-cb53-4dc7-91e3-7b7590977e7f](https://github.com/HealthSciTech/E2E-PPG/assets/67778755/82ba92d8-b012-4202-8e17-127b0a5df4e5)
+
+
 
 
 ## HR and HRV Extraction
