@@ -52,9 +52,10 @@ HR and HRV parameters are computed from the extracted IBIs. A variety of metrics
 - SDNN: Standard deviation of the RR intervals
 - ... (list continues for various HRV metrics)
 
-  ## Usage
+## Usage
 
-Learn how to use the PPG Signal Processing Pipeline effectively with detailed examples and code snippets in the [Usage](#) section.
+See the `Example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `E2E_PPG_Pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
+
 
 ## Contributing
 
