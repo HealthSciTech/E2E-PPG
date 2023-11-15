@@ -54,6 +54,8 @@ HR and HRV parameters are computed from the extracted IBIs. A variety of metrics
 
 ## Usage
 
+Install the required packages available in `requirements.txt`. 
+
 See the `Example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `E2E_PPG_Pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
 
 
