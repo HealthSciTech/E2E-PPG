@@ -61,6 +61,50 @@ Install the required packages available in `requirements.txt`.
 See the `Example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `E2E_PPG_Pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
 
 ## Citation
+If you use our work in your research, please consider citing the following papers:
+
+1. **An energy-efficient semi-supervised approach for on-device photoplethysmogram signal quality assessment**
+
+  ```
+  @article{feli2023energy,
+  title={An energy-efficient semi-supervised approach for on-device photoplethysmogram signal quality assessment},
+  author={Feli, Mohammad and Azimi, Iman and Anzanpour, Arman and Rahmani, Amir M and Liljeberg, Pasi},
+  journal={Smart Health},
+  volume={28},
+  pages={100390},
+  year={2023},
+  publisher={Elsevier}
+  }
+  ```
+
+2. **Ppg signal reconstruction using deep convolutional generative adversarial network**
+
+  ```
+ @inproceedings{wang2022ppg,
+  title={Ppg signal reconstruction using deep convolutional generative adversarial network},
+  author={Wang, Yuning and Azimi, Iman and Kazemi, Kianoosh and Rahmani, Amir M and Liljeberg, Pasi},
+  booktitle={2022 44th Annual International Conference of the IEEE Engineering in Medicine \& Biology Society (EMBC)},
+  pages={3387--3391},
+  year={2022},
+  organization={IEEE}
+  }
+  ```
+
+3. **Robust ppg peak detection using dilated convolutional neural networks**
+
+  ```
+  @article{kazemi2022robust,
+  title={Robust ppg peak detection using dilated convolutional neural networks},
+  author={Kazemi, Kianoosh and Laitala, Juho and Azimi, Iman and Liljeberg, Pasi and Rahmani, Amir M},
+  journal={Sensors},
+  volume={22},
+  number={16},
+  pages={6054},
+  year={2022},
+  publisher={MDPI}
+  }
+  ```
+
 
 ## Contributing
 
