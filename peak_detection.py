@@ -6,8 +6,6 @@ Author:  Kianoosh Kazemi
 
 
 
-from scipy.signal import butter, filtfilt
-from scipy import stats
 import neurokit2 as nk
 import numpy as np
 from wfdb import processing
@@ -23,19 +21,8 @@ def normalize(arr):
   '''
   return 1 * ((arr - arr.min()) / (arr.max() - arr.min()))
 
-# def butter_filtering(sig,fs,fc,order,btype): 
-#   '''
-#   Parameters: signal, sampling frequency, cutoff frequencies, order of the filter, filter type (e.g., bandpass)
 
-#   Returns: filtered signal
-#   '''
 
-#   w = np.array(fc)/(fs/2)
-#   b, a = butter(order, w, btype =btype, analog=False)
-#   filtered = filtfilt(b, a, sig)
-#   return(filtered)
-
-def upsample(signal, org_fs):
   '''
   Parameters: signal, old sampling frequency
 
@@ -167,10 +154,7 @@ def PPG_Peak(signal, sampling_freq, seconds, overlap, minlen):
         resampling_rate = 100/sampling_freq
         signal = resample(signal, int(len(signal)*resampling_rate))
         sampling_freq = 100
-    # upsampled_signal = upsample(signal, sampling_freq) 
     
-    ## Calling the filtering method
-    # filtered_signal = butter_filtering(upsampled_signal, sampling_freq, fc, order, btype)
     
     ## Calling the splitting method
     segmentized_signal = splitSignal(signal, sampling_freq, seconds, overlap, minlen)
@@ -188,6 +172,6 @@ def PPG_Peak(signal, sampling_freq, seconds, overlap, minlen):
       ## Appending all the indeces
       indeces.append(peak_index)
     
-    peak_indexes = [item for sublist in peak_index for item in sublist]
+    peak_indexes = [item for sublist in indeces for item in sublist]
 
-    return peak_indexes
+    return peak_indexes, sampling_freq

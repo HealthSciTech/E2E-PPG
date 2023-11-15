@@ -10,7 +10,7 @@ import pandas as pd
 
 # Define a function to extract clean PPG segments based on quality information
 def clean_ppg_extraction(ppg_signal, gaps, window_length_min, sample_rate, timestamp):
-     """
+    """
     Extract clean PPG segments from the input signal based on quality information.
     
     Parameters:
@@ -46,7 +46,7 @@ def clean_ppg_extraction(ppg_signal, gaps, window_length_min, sample_rate, times
                     result.append((start,end))
                     
                 start = i+1
-    
+        
         return result
     
     # Create a new DataFrame to store timestamp, PPG, and quality information

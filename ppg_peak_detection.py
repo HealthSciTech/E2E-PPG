@@ -39,22 +39,22 @@ def peak_detection(ppg_cleans, sample_rate, method='nk'):
             info  = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sample_rate_new)
             peaks = info["PPG_Peaks"]
             segments_peaks.append(peaks)
-        return segments_peaks
+        return segments_peaks, sample_rate_new
     
     elif method == 'kazemi':
         for i in range(len(ppg_cleans)):
-            peaks= PPG_Peak(np.asarray(ppg_cleans[i]), sample_rate, seconds = 15, overlap = 0, minlen = 15, doplot = False)
+            peaks, sample_rate_new = PPG_Peak(np.asarray(ppg_cleans[i]), sample_rate, seconds = 15, overlap = 0, minlen = 15)
             segments_peaks.append(peaks)
-        return segments_peaks
+        return segments_peaks, sample_rate_new
 
     elif method == 'heartpy':
         # HeartPy method
         for i in range(len(ppg_cleans)):
             rol_mean = rolling_mean(ppg_cleans[i], windowsize = 0.75, sample_rate = sample_rate)
-            wd = hp.peakdetection.detect_peaks(ppg_cleans[i], rol_mean, ma_perc = 20, sample_rate = sample_rate)
+            wd = hp.peakdetection.detect_peaks(np.array(ppg_cleans[i]), rol_mean, ma_perc = 20, sample_rate = sample_rate)
             peaks = wd['peaklist']
             segments_peaks.append(peaks)
-        return segments_peaks
+        return segments_peaks, sample_rate
         
     else:
         print("Invalid method. Please choose from 'neurokit', 'kazemi', or 'heartpy'")

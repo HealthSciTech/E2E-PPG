@@ -5,7 +5,6 @@ Created on Mon Oct 31 16:07:50 2022
 @author: mofeli
 """
 # Import necessary libraries and modules
-import heartpy as hp
 import numpy as np
 from scipy import stats
 from scipy import signal

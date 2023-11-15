@@ -6,13 +6,11 @@ Created on Wed Nov  2 15:09:18 2022
 """
 
 # Import necessary libraries
-import numpy as np
 import neurokit2 as nk
-from scipy import signal
 import pandas as pd
 
 # Define a function to extract HRV parameters from PPG segments
-def HRV_parameters(ppg_segment, timestamp, sample_rate, window_length):
+def HRV_parameters(ppg_segment, timestamp, peaks, sample_rate, ppg_length):
     """
     Extract HRV parameters from a PPG segment.
 
@@ -25,42 +23,21 @@ def HRV_parameters(ppg_segment, timestamp, sample_rate, window_length):
     Returns:
     - HRV_indices (pandas.DataFrame): DataFrame containing HRV indices.
     """
-    
-    ppg_length = window_length
-    
-    upsampling_rate = 2
-    sample_rate_new = sample_rate * upsampling_rate
-
-    # Normalize PPG signal
-    def NormalizeData(signal):
-        return (signal - np.min(signal)) / (np.max(signal) - np.min(signal))
-    
-    # remove 10 samples from the beginning and end of the segment
-    # ppg_segment = ppg_segment[10:-10]
-    
-    # Normalize PPG signal
-    ppg_normed = NormalizeData(ppg_segment)
-    # Upsample the signal
-    resampled = signal.resample(ppg_normed, len(ppg_normed) * upsampling_rate)
-    
-    ppg_cleaned = nk.ppg_clean(resampled, sampling_rate=sample_rate_new)
-    info  = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sample_rate_new)
-    peaks = info["PPG_Peaks"]
-    
+        
     # Calculate pulse rate
     pulse_rate = (len(peaks)/ppg_length)
     
     HRV_indices = []
     
     # HRV values: time, frequency, and non-linear features
-    hrv_times = nk.hrv_time(peaks, sampling_rate=sample_rate_new, show=False)
+    hrv_times = nk.hrv_time(peaks, sampling_rate=sample_rate, show=False)
     hrv_times = hrv_times[['HRV_MeanNN','HRV_SDNN','HRV_RMSSD','HRV_SDSD', 'HRV_CVNN', 'HRV_CVSD', 'HRV_MedianNN', 'HRV_MadNN', 'HRV_MCVNN', 'HRV_IQRNN', 'HRV_Prc80NN', 'HRV_pNN50', 'HRV_pNN20', 'HRV_MinNN', 'HRV_MaxNN','HRV_TINN','HRV_HTI']]
     HRV_indices.append(hrv_times)
 
-    hrv_freqs = nk.hrv_frequency(peaks, sampling_rate=sample_rate_new, show=False, psd_method="welch")
+    hrv_freqs = nk.hrv_frequency(peaks, sampling_rate=sample_rate, show=False, psd_method="welch")
     HRV_indices.append(hrv_freqs)
     
-    hrv_nonlinear = nk.hrv_nonlinear(peaks, sampling_rate=sample_rate_new, show=False)
+    hrv_nonlinear = nk.hrv_nonlinear(peaks, sampling_rate=sample_rate, show=False)
     hrv_nonlinear = hrv_nonlinear[['HRV_SD1','HRV_SD2','HRV_SD1SD2','HRV_S']]
     HRV_indices.append(hrv_nonlinear)
 
@@ -88,7 +65,7 @@ def HRV_parameters(ppg_segment, timestamp, sample_rate, window_length):
 
 
 # Define a function to extract HRV parameters from a list of PPG segments
-def PPG_HRV_Extraction(ppg_cleans, timestamps, sample_rate, window_length):
+def PPG_HRV_Extraction(ppg_cleans, timestamps, peaks, sample_rate, window_length):
     """
     Extract HRV parameters from a list of PPG segments.
 
@@ -105,7 +82,7 @@ def PPG_HRV_Extraction(ppg_cleans, timestamps, sample_rate, window_length):
     # Iterate through PPG segments and extract HRV parameters
     for i in range(len(ppg_cleans)):
         try:
-            HRV_indices = HRV_parameters(ppg_cleans[i], timestamps[i], sample_rate, window_length)
+            HRV_indices = HRV_parameters(ppg_cleans[i], timestamps[i], peaks[i], sample_rate, window_length)
         except:
             # If an error occurs during HRV extraction, skip to the next segment
             if i == 0:
