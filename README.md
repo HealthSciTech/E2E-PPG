@@ -1,6 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/neurokit2.svg?logo=pypi&logoColor=FFE873)](https://pypi.org/project/E2E-PPG-Pipeline/0.1.0/)
-
-
+[![PyPI](https://img.shields.io/pypi/pyversions/neurokit2.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/E2E-PPG-Pipeline/0.1.0/)
 
 # End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction (E2E-PPG)
 
