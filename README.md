@@ -66,7 +66,7 @@ We welcome contributions to enhance and extend the capabilities of the PPG Signa
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE.md).
+This project is licensed under the terms of the [MIT License](LICENSE.md).
 
 ## Acknowledgments
 
