@@ -69,51 +69,77 @@ HR and HRV parameters are computed from the extracted IBIs. A variety of metrics
 Install the required packages available in `requirements.txt`. 
 
 See the `Example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `E2E_PPG_Pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
-
 ## Citation
+
 If you use our work in your research, please consider citing the following papers:
 
-1. **An energy-efficient semi-supervised approach for on-device photoplethysmogram signal quality assessment**
+1. **End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction**
+   (PPG Pipeline Paper)
 
-  ```
-  @article{feli2023energy,
-  title={An energy-efficient semi-supervised approach for on-device photoplethysmogram signal quality assessment},
-  author={Feli, Mohammad and Azimi, Iman and Anzanpour, Arman and Rahmani, Amir M and Liljeberg, Pasi},
-  journal={Smart Health},
-  volume={28},
-  pages={100390},
-  year={2023},
-  publisher={Elsevier}
-  }
-  ```
+   - *Conference:* [2023 IEEE International Conference on Bioinformatics and Biomedicine (BIBM)](https://ieeexplore.ieee.org/document/XXXXXXX)
+   - *Authors:* Mohammad Feli, Kianoosh Kazemi, Iman Azimi, Yuning Wang, Amir Rahmani, Pasi Liljeberg
+   - ```
+     @inproceedings{feli2023end,
+       title={End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction},
+       author={Feli, Mohammad and Kazemi, Kianoosh and Azimi, Iman and Wang, Yuning and Rahmani, Amir and Liljeberg, Pasi},
+       booktitle={2023 IEEE International Conference on Bioinformatics and Biomedicine (BIBM)},
+       year={2023},
+       organization={IEEE}
+     }
+     ```
 
-2. **Ppg signal reconstruction using deep convolutional generative adversarial network**
+2. **An Energy-Efficient Semi-Supervised Approach for On-Device Photoplethysmogram Signal Quality Assessment**
+   (PPG Quality Assessment Paper)
 
-  ```
- @inproceedings{wang2022ppg,
-  title={Ppg signal reconstruction using deep convolutional generative adversarial network},
-  author={Wang, Yuning and Azimi, Iman and Kazemi, Kianoosh and Rahmani, Amir M and Liljeberg, Pasi},
-  booktitle={2022 44th Annual International Conference of the IEEE Engineering in Medicine \& Biology Society (EMBC)},
-  pages={3387--3391},
-  year={2022},
-  organization={IEEE}
-  }
-  ```
+   - *Journal:* [Smart Health](https://www.sciencedirect.com/journal/smart-health)
+   - *Authors:* Mohammad Feli, Iman Azimi, Arman Anzanpour, Amir M Rahmani, Pasi Liljeberg
+   - ```
+     @article{feli2023energy,
+       title={An Energy-Efficient Semi-Supervised Approach for On-Device Photoplethysmogram Signal Quality Assessment},
+       author={Feli, Mohammad and Azimi, Iman and Anzanpour, Arman and Rahmani, Amir M and Liljeberg, Pasi},
+       journal={Smart Health},
+       volume={28},
+       pages={100390},
+       year={2023},
+       publisher={Elsevier}
+     }
+     ```
 
-3. **Robust ppg peak detection using dilated convolutional neural networks**
+3. **PPG Signal Reconstruction Using Deep Convolutional Generative Adversarial Network**
+   (PPG Reconstruction Paper)
 
-  ```
-  @article{kazemi2022robust,
-  title={Robust ppg peak detection using dilated convolutional neural networks},
-  author={Kazemi, Kianoosh and Laitala, Juho and Azimi, Iman and Liljeberg, Pasi and Rahmani, Amir M},
-  journal={Sensors},
-  volume={22},
-  number={16},
-  pages={6054},
-  year={2022},
-  publisher={MDPI}
-  }
-  ```
+   - *Conference:* [2022 44th Annual International Conference of the IEEE Engineering in Medicine \& Biology Society (EMBC)](https://ieeexplore.ieee.org/xpl/conhome/9870821/proceeding)
+   - *Authors:* Yuning Wang, Iman Azimi, Kianoosh Kazemi, Amir M Rahmani, Pasi Liljeberg
+   - ```
+     @inproceedings{wang2022ppg,
+       title={PPG Signal Reconstruction Using Deep Convolutional Generative Adversarial Network},
+       author={Wang, Yuning and Azimi, Iman and Kazemi, Kianoosh and Rahmani, Amir M and Liljeberg, Pasi},
+       booktitle={2022 44th Annual International Conference of the IEEE Engineering in Medicine \& Biology Society (EMBC)},
+       pages={3387--3391},
+       year={2022},
+       organization={IEEE}
+     }
+     ```
+
+4. **Robust PPG Peak Detection Using Dilated Convolutional Neural Networks**
+   (PPG Peak Detection Paper)
+
+   - *Journal:* [Sensors](https://www.mdpi.com/journal/sensors)
+   - *Authors:* Kianoosh Kazemi, Juho Laitala, Iman Azimi, Pasi Liljeberg, Amir M Rahmani
+   - ```
+     @article{kazemi2022robust,
+       title={Robust PPG Peak Detection Using Dilated Convolutional Neural Networks},
+       author={Kazemi, Kianoosh and Laitala, Juho and Azimi, Iman and Liljeberg, Pasi and Rahmani, Amir M},
+       journal={Sensors},
+       volume={22},
+       number={16},
+       pages={6054},
+       year={2022},
+       publisher={MDPI}
+     }
+     ```
+
+
 
 
 ## Contributing
