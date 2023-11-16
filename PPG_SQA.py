@@ -5,37 +5,49 @@ Created on Mon Oct 31 16:07:50 2022
 @author: mofeli
 """
 # Import necessary libraries and modules
+import pickle
+import os
+from typing import Tuple
 import numpy as np
 from scipy import stats
 from scipy import signal
 import neurokit2 as nk
 import more_itertools as mit
-import matplotlib.pyplot as plt
-import pickle
 import joblib
+from utils import normalize_data
 
-# Function to segment the PPG signal into fixed-size segments
-def segmentation(ppg, ppg_x, sample_rate, method='shifting', segmentation_step=5):
+
+MODEL_PATH = "models"
+SCALER_FILE_NAME = "Train_data_scaler.save"
+SQA_MODEL_FILE_NAME = 'OneClassSVM_model.sav'
+
+
+def segmentation(
+    ppg: np.ndarray,
+    ppg_x: np.ndarray,
+    sampling_rate: int,
+    method: str = 'shifting',
+    segmentation_step: int = 5
+) -> Tuple[list, list]:
     """
     Segments the PPG signal into fixed-size segments.
     
-    Parameters:
-    - ppg (numpy.ndarray): PPG signal.
-    - ppg_x (list): Corresponding x values for the PPG signal.
-    - sample_rate (int): Sampling rate of the PPG signal.
-    - method (str): Segmentation method. Options: 'standard' or 'shifting'.
-    - segmentation_step (int): Size of the segmentation step in seconds.
+    Input parameters:
+        ppg: PPG signal.
+        ppg_x: Corresponding indices for the PPG signal.
+        sampling_rate: Sampling rate of the PPG signal.
+        method: Segmentation method. Options: 'standard' or 'shifting'.
+        segmentation_step: Size of the segmentation step in seconds.
     
     Returns:
-    - segments (list): List of PPG signal segments.
-    - segments_x (list): List of corresponding x values for the segments.
+        segments: List of PPG signal segments.
+        segments_x: List of corresponding indices (time) for the segments.
     """
-    
-    segment_size=30*sample_rate
+    segment_size = 30*sampling_rate
     segments = []
     segments_x = []
     index = 0
-    while(index<len(ppg)):
+    while index<len(ppg):
         segment = ppg[index:index+segment_size]
         segment_x = ppg_x[index:index+segment_size]
         if len(segment) == segment_size:
@@ -45,7 +57,7 @@ def segmentation(ppg, ppg_x, sample_rate, method='shifting', segmentation_step=5
             index = index + segmentation_step
         elif method == 'standard':
             index = index + segment_size
-    return segments, segments_x
+    return (segments, segments_x)
 
 
 # Function to detect heart cycles in the PPG signal
@@ -53,11 +65,10 @@ def heart_cycle_detection(sample_rate, upsampling_rate, sample):
     
     sampling_rate = sample_rate * upsampling_rate
     
-    def NormalizeData(signal):
-        return (signal - np.min(signal)) / (np.max(signal) - np.min(signal))
+    
     
     # normalization
-    ppg_normed = NormalizeData(sample)
+    ppg_normed = normalize_data(sample)
     # upsampling signal
     resampled = signal.resample(ppg_normed, len(ppg_normed) * upsampling_rate)
     # clean PPG signal and prepare it for peak detection
@@ -150,41 +161,59 @@ def feature_extraction(ppg_segment, sample_rate):
 
 
 # Main function for PPG Signal Quality Assessment
-def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
+def ppg_sqa(
+        sig: np.ndarray,
+        sampling_rate: int,
+) -> Tuple[list, list]:
+    """
+    PPG Signal Quality Assessment.
     
+    Input parameters:
+        sig: PPG signal.
+        sampling_rate: Sampling rate of the PPG signal.
+    
+    Returns:
+        x_reliable: ...
+        gaps: ...
+    """
     # Load pre-trained model and normalization scaler
-    scaler_filename = "Train_data_scaler.save"
-    model_filename = 'OneClassSVM_model.sav'
-    scaler = joblib.load(scaler_filename)
-    model = pickle.load(open(model_filename, 'rb'))
-    
+    scaler = joblib.load(os.path.join(MODEL_PATH, SCALER_FILE_NAME))
+    model = pickle.load(
+        open(os.path.join(MODEL_PATH, SQA_MODEL_FILE_NAME), 'rb'))
+
     # Set the segmentation step for 5 seconds
-    segmentation_step = 5*sample_rate
-    
-    # Generate x values for the PPG signal
-    ppg_x = list(range(len(ppg_filtered)))
-    
+    segmentation_step = 5*sampling_rate
+
+    # Generate indices for the PPG signal
+    sig_indices = np.arange(sig.size)
+
     # Segmentation of the PPG signal
-    segments, segments_x = segmentation(ppg_filtered, ppg_x, sample_rate, 'shifting', segmentation_step)
+    segments, segments_x = segmentation(
+        ppg=sig,
+        ppg_x=sig_indices,
+        sampling_rate=sampling_rate,
+        method='shifting',
+        segmentation_step=segmentation_step
+    )
 
     # Initialize lists to store reliable and unreliable segments
     reliable_segments = []
     unreliable_segments = []
     reliable_segments_x = []
     unreliable_segments_x = []
+
     # Loop through the segments for feature extraction and classification
-    for i in range(len(segments)):
-        
+    for idx in range(len(segments)):
         # Feature extraction
-        features = feature_extraction(segments[i], sample_rate)
-        
+        features = feature_extraction(segments[idx], sampling_rate)
+
         # Classification
         if(np.isnan(np.array(features)).any()):
             pred = 1
-        else:  
+        else:
             features_norm  = scaler.transform([features])
             pred = model.predict(features_norm)
-        
+
         # Categorize segments based on classification result
         if pred == 0:
             reliable_segments.append(segments[i])
@@ -192,39 +221,14 @@ def PPG_SQA(ppg_filtered, sample_rate, doPlot=False):
         else:
             unreliable_segments.append(segments[i])
             unreliable_segments_x.append(segments_x[i])
-            
+
     # Generate lists of reliable and unreliable x values        
     x_reliable = list(set([item for segment in reliable_segments_x for item in segment]))
-    x_unreliable = [item for item in ppg_x if item not in x_reliable]
-    
+    x_unreliable = [item for item in sig_indices if item not in x_reliable]
+
     # Extract gaps (noisy parts) of the signal
     gaps = []
     for group in mit.consecutive_groups(x_unreliable):
         gaps.append(list(group))
     gaps = [gaps[i] for i in range(len(gaps)) if len(gaps[i]) > segmentation_step]
-    
-    
-    # add 2 min confidnece interval to before and after gap 
-    # conf_interval = 2*sample_rate
-    # for gap in gaps:
-    #     if gap == gaps[0]:
-    #         if gap[0] < conf_interval:
-    #             gap[0:0] = x_reliable[:gap[0]]
-    #             if gap[-1] < len(ppg_filtered)-(2*sample_rate):
-    #                 gap.extend(x_reliable[gap[-1]:gap[-1]+conf_interval])
-    #             else:
-    #                 gap.extend(x_reliable[gap[-1]:)
-                                          
-                                    
-    # Uncomment the following block for additional visualization           
-    # if doPlot==True:
-    #     x = range(len(ppg_filtered))
-    #     # plt.plot(x,ppg_filt)
-    #     for i in range(len(gaps)):
-    #         plt.figure(figsize=[12,8])
-    #         plt.plot(x[gaps[i][0]-200:gaps[i][-1]+200],ppg_filtered[gaps[i][0]-200:gaps[i][-1]+200])
-    #         plt.axvspan(gaps[i][0], gaps[i][-1], color='red', alpha=0.5)
-#     plt.title(filename)
-    
-    # Return reliable x values and gaps
-    return x_reliable, gaps
+    return (x_reliable, gaps)
