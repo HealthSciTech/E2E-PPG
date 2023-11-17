@@ -5,7 +5,7 @@ Created on Mon Oct 31 16:02:05 2022
 @author: mofeli
 """
 # Import necessary libraries and modules
-from ppg_sqa import PPG_SQA
+from PPG_SQA import ppg_sqa
 from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_ppg_extraction
 from PPG_HRV_Extraction import PPG_HRV_Extraction
@@ -37,7 +37,7 @@ def HRV_Extraction(ppg, timestamp,  sample_rate, window_length_min, reconstructi
 
     
     # Signal quality assessment
-    x_reliable, gaps = PPG_SQA(ppg_filtered, sample_rate, doPlot=False)
+    x_reliable, gaps = ppg_sqa(ppg_filtered, sample_rate)
     
     # PPG reconstruction for noises less than 15 sec using GAN model
     ppg_signal, x_reliable, gaps = ppg_reconstruction(reconstruction_model_parameters[0], reconstruction_model_parameters[1] ,ppg_filtered, x_reliable, gaps, sample_rate)

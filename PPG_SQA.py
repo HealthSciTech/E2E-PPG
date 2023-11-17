@@ -15,13 +15,13 @@ import neurokit2 as nk
 import more_itertools as mit
 import joblib
 from utils import normalize_data, get_data
-
+from PPG_Filtering import PPG_bandpass_filter
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
 SQA_MODEL_FILE_NAME = 'OneClassSVM_model.sav'
 SEGMENT_SIZE = 30
-SHIFTING_SIZE = 5
+SHIFTING_SIZE = 2
 
 
 def segmentation(
@@ -279,8 +279,16 @@ if __name__ == "__main__":
     FILE_NAME = "201902020222_Data.csv"
     SAMPLING_FREQUENCY = 20
     input_sig = get_data(file_name=FILE_NAME)
+    
+    
+    # Bandpass filter parameters
+    lowcut = 0.5  # Lower cutoff frequency in Hz
+    highcut = 3  # Upper cutoff frequency in Hz
+    
+    # Apply bandpass filter
+    filtered_sig = PPG_bandpass_filter(input_sig, lowcut, highcut, SAMPLING_FREQUENCY)
 
     # Run PPG signal quality assessment.
-    x_reliable, gaps = ppg_sqa(sig=input_sig, sampling_rate=SAMPLING_FREQUENCY)
+    x_reliable, gaps = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
     print(x_reliable)
     # print(gaps)

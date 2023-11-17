@@ -9,7 +9,7 @@ import pandas as pd
 from  E2E_PPG_Pipeline import HRV_Extraction
 
 # Specify the input file and sample rate
-file = '201902020222_Data.csv'
+file = 'data/201902020222_Data.csv'
 sample_rate = 20
 
 
@@ -32,5 +32,8 @@ window_length_min = 1.5
 hrv_data = HRV_Extraction(ppg, timestamp, sample_rate, window_length_min, reconstruction_model_parameters)
 
 # Save HRV data to a CSV file
-filename = 'HRV_' + file
-hrv_data.to_csv(filename, index=False)
+# filename = 'HRV_' + file
+# hrv_data.to_csv(filename, index=False)
+
+
+hrv_data.to_csv('HRV_data.csv', index=False)
