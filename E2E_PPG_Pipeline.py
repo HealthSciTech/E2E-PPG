@@ -10,7 +10,7 @@ from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_ppg_extraction
 from PPG_HRV_Extraction import PPG_HRV_Extraction
 from scipy.signal import resample
-from PPG_Peak_Detection import peak_detection
+from ppg_peak_detection import peak_detection
 from PPG_Filtering import PPG_bandpass_filter
 
 import warnings
