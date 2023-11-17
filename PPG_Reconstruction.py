@@ -36,7 +36,7 @@ def reconstruct(generator, device, ppg, gap, sampling_rate):
     
     # reconstruction of 5 sec signal in each iteration
     shifting_step = 5 
-    len_rec = int(5*sampling_rate)
+    len_rec = int(shifting_step*sampling_rate)
     
     ppg_clean = ppg
     reconstructed_gap = []
