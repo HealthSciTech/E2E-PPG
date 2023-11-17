@@ -7,156 +7,196 @@ Created on Mon Oct 31 16:07:50 2022
 # Import necessary libraries and modules
 import pickle
 import os
-from typing import Tuple
+from typing import Tuple, List
 import numpy as np
 from scipy import stats
 from scipy import signal
 import neurokit2 as nk
 import more_itertools as mit
 import joblib
-from utils import normalize_data
+from utils import normalize_data, get_data
 
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
 SQA_MODEL_FILE_NAME = 'OneClassSVM_model.sav'
+SEGMENT_SIZE = 30
+SHIFTING_SIZE = 5
 
 
 def segmentation(
-    ppg: np.ndarray,
-    ppg_x: np.ndarray,
+    sig: np.ndarray,
+    sig_indices: np.ndarray,
     sampling_rate: int,
     method: str = 'shifting',
-    segmentation_step: int = 5
-) -> Tuple[list, list]:
+    segment_size: int = 30,
+    shift_size: int = 5,
+) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
-    Segments the PPG signal into fixed-size segments.
+    Segments the signals (PPG) and their indices into fixed-size segments.
     
     Input parameters:
-        ppg: PPG signal.
-        ppg_x: Corresponding indices for the PPG signal.
+        sig: Input signal (e.g., PPG).
+        sig_indices: Corresponding indices for the input signal.
         sampling_rate: Sampling rate of the PPG signal.
         method: Segmentation method. Options: 'standard' or 'shifting'.
-        segmentation_step: Size of the segmentation step in seconds.
+            Segments do not overlap for 'standard' and overlap with the
+            size of (segment_size - shift_size) for 'shifting'.
+        segment_size: Size of the segment (in second).
+        shift_size: Size of the shift (in seconds) in segmentation
+            in case method is 'shifting'.
     
     Returns:
-        segments: List of PPG signal segments.
-        segments_x: List of corresponding indices (time) for the segments.
+        segments_sig: List of segments (PPG).
+        segments_indices: List of segments (indices).
     """
-    segment_size = 30*sampling_rate
-    segments = []
-    segments_x = []
-    index = 0
-    while index<len(ppg):
-        segment = ppg[index:index+segment_size]
-        segment_x = ppg_x[index:index+segment_size]
-        if len(segment) == segment_size:
-            segments.append(segment)
-            segments_x.append(segment_x)
-        if method == 'shifting':
-            index = index + segmentation_step
-        elif method == 'standard':
-            index = index + segment_size
-    return (segments, segments_x)
+    signal_length = len(sig)
+    segment_length = int(segment_size*sampling_rate)
+    shift_length = int(shift_size*sampling_rate)
+    if method == 'standard':
+        # Non-overlapping segments
+        segments_sig = [sig[i:i+segment_length] for i in range(
+            0, signal_length, segment_length
+                ) if i + segment_length <= signal_length]
+        segments_indices = [sig_indices[i:i+segment_length] for i in range(
+            0, signal_length, segment_length
+                ) if i + segment_length <= signal_length]
+    elif method == 'shifting':
+        # Overlapping segments
+        segments_sig = [sig[i:i+segment_length] for i in range(
+            0, signal_length - segment_length + 1, shift_length
+                ) if i + segment_length <= signal_length]
+        segments_indices = [sig_indices[i:i+segment_length] for i in range(
+            0, signal_length - segment_length + 1, shift_length
+                ) if i + segment_length <= signal_length]
+    else:
+        raise ValueError("Invalid method. Use 'standard' or 'shifting'.")
+    return segments_sig, segments_indices
 
 
-# Function to detect heart cycles in the PPG signal
-def heart_cycle_detection(sample_rate, upsampling_rate, sample):
+def heart_cycle_detection(
+        ppg: np.ndarray,
+        sampling_rate: int,
+) -> list:
+    """
+    Extract heart cycles from the PPG signal
     
-    sampling_rate = sample_rate * upsampling_rate
+    Input parameters:
+        ppg: Input PPG signal.
+        sampling_rate: Sampling rate of the PPG signal.
     
-    
-    
-    # normalization
-    ppg_normed = normalize_data(sample)
-    # upsampling signal
-    resampled = signal.resample(ppg_normed, len(ppg_normed) * upsampling_rate)
-    # clean PPG signal and prepare it for peak detection
-    ppg_cleaned = nk.ppg_clean(resampled, sampling_rate=sampling_rate)
-    # peak detection
+    Returns:
+        beats: List of heart cycles
+    """
+    # Normalization
+    ppg_normalized = normalize_data(ppg)
+    # Upsampling signal by 2
+    sampling_rate = sampling_rate*2
+    ppg_upsampled = signal.resample(ppg_normalized, len(ppg_normalized)*2)
+    # Clean PPG signal and prepare it for peak detection
+    ppg_cleaned = nk.ppg_clean(ppg_upsampled, sampling_rate=sampling_rate)
+    # Systolic peak detection
     info  = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate)
     peaks = info["PPG_Peaks"]
-    # heart cycle detection based on the peaks and fixed intervals
+    # Heart cycle detection based on the peaks and fixed intervals
     beats = []
-    if len(peaks) != 0:
-        # define a fixed interval in PPG signal to detect heart cycles
-        beat_bound = round((len(resampled)/len(peaks))/2)
-        for i in peaks:
-            # we ignore the first and last beat to prevent boundary error
-            if i == peaks[0]:
-                continue
-            elif i == peaks[-1]:
-                break
-            else:
-                # select beat from the cleaned signal and add it to the list
-                beat = ppg_cleaned[(i-beat_bound):(i+beat_bound)]
-                if len(beat) < beat_bound*2:
-                    continue
+    if len(peaks) < 2:
+        return beats
+    # Define a fixed interval in PPG signal to detect heart cycles
+    beat_bound = round((len(ppg_upsampled)/len(peaks))/2)
+    # We ignore the first and last beat to prevent boundary error
+    for i in range(1, len(peaks) - 1):
+        # Select beat from the signal and add it to the list
+        beat_start = peaks[i] - beat_bound
+        beat_end = peaks[i] + beat_bound
+        if beat_start >= 0 and beat_end < len(ppg_cleaned):
+            beat = ppg_cleaned[beat_start:beat_end]
+            if len(beat) >= beat_bound*2:
                 beats.append(beat)
     return beats
 
-# Function to extract features from PPG segments
-def feature_extraction(ppg_segment, sample_rate):
-    
-    def energy_hc(sample_beats):
-        energy = []
-        for i in range(len(sample_beats)):
-            energy.append(np.sum(sample_beats[i]*sample_beats[i]))
-        if energy == []:
-            var_energy = 0
-        else:
-            # calculate variation
-            var_energy = max(energy) - min(energy)
 
-        return var_energy
+def energy_hc(beats: list) -> float:
+    """
+    Extract energy of heart cycle
     
+    Input parameters:
+        beats: List of heart cycles
     
-    def template_matching_features(sample_beats):
-
-        beats = np.array([np.array(xi) for xi in sample_beats if xi.size != 0])
-        # Calculate the template by averaging all beats
-        template = np.mean(beats, axis=0)
-        # Average Euclidian
-        distances = []
-        for i in range(len(sample_beats)):
-            distances.append(np.linalg.norm(template-sample_beats[i]))
-        tm_ave_eu = np.mean(distances)
-
-        # Average Correlation
-        corrs = []
-        for i in range(len(sample_beats)):
-            corr_matrix = np.corrcoef(template, sample_beats[i])
-            corrs.append(corr_matrix[0,1])
-        tm_ave_corr = np.mean(corrs)
+    Returns:
+        var_energy: Variation of heart cycles energy
+    """
+    energy = []
+    for beat in beats:
+        energy.append(np.sum(beat*beat))
+    if not energy:
+        var_energy = 0
+    else:
+        # Calculate variation
+        var_energy = max(energy) - min(energy)
+    return var_energy
 
 
-        return tm_ave_eu, tm_ave_corr
+def template_matching_features(beats: list) -> Tuple[float, float]:
+    """
+    Extract template matching features from heart cycles
     
-    # feature 1: Interquartile range  
-    iqr_rate = stats.iqr(ppg_segment, interpolation='midpoint')
+    Input parameters:
+        beats: List of heart cycles
     
+    Returns:
+        tm_ave_eu: Average of Euclidean distance with the template
+        tm_ave_corr: Average of correlation with the template
+    """
+    beats = np.array([np.array(xi) for xi in beats if len(xi) != 0])
+    # Calculate the template by averaging all beats
+    template = np.mean(beats, axis=0)
+    # Euclidean distance and correlation
+    distances = []
+    corrs = []
+    for beat in beats:
+        distances.append(np.linalg.norm(template-beat))
+        corr_matrix = np.corrcoef(template, beat)
+        corrs.append(corr_matrix[0, 1])
+    tm_ave_eu = np.mean(distances)
+    tm_ave_corr = np.mean(corrs)
+    return tm_ave_eu, tm_ave_corr
+
+
+def feature_extraction(
+        ppg: np.ndarray,
+        sampling_rate: int,
+) -> List[float]:
+    """
+    Extract features from PPG signal
+    
+    Input parameters:
+        ppg: Input PPG signal.
+        sampling_rate: Sampling rate of the PPG signal.
+    
+    Returns:
+        features: List of features
+    """
+    # feature 1: Interquartile range
+    iqr_rate = stats.iqr(ppg, interpolation='midpoint')
+
     # feature 2: STD of power spectral density
-    f, Pxx_den = signal.periodogram(ppg_segment, sample_rate)
-    std_p_spec = np.std(Pxx_den)
-    
+    _, pxx_den = signal.periodogram(ppg, sampling_rate)
+    std_p_spec = np.std(pxx_den)
+
     # Heart cycle detection
-    beats = heart_cycle_detection(sample_rate=sample_rate, upsampling_rate=2, sample=ppg_segment)
-    
-    
-    if len(beats) != 0:
-        
+    beats = heart_cycle_detection(ppg=ppg, sampling_rate=sampling_rate)
+    if beats:
         # feature 3: variation in energy of heart cycles
         var_energy = energy_hc(beats)
-        
+
         # features 4, 5: average Euclidean and Correlation in template matching
         tm_ave_eu, tm_ave_corr = template_matching_features(beats)
-        
-        #Classification
-        features = [iqr_rate, std_p_spec, var_energy, tm_ave_eu, tm_ave_corr]
     else:
-        features = [iqr_rate, std_p_spec, np.nan, np.nan, np.nan]
-    
-    
+        var_energy = np.nan
+        tm_ave_eu = np.nan
+        tm_ave_corr = np.nan
+    features = [iqr_rate, std_p_spec, var_energy, tm_ave_eu, tm_ave_corr]
     return features
 
 
@@ -181,19 +221,17 @@ def ppg_sqa(
     model = pickle.load(
         open(os.path.join(MODEL_PATH, SQA_MODEL_FILE_NAME), 'rb'))
 
-    # Set the segmentation step for 5 seconds
-    segmentation_step = 5*sampling_rate
-
     # Generate indices for the PPG signal
-    sig_indices = np.arange(sig.size)
+    sig_indices = np.arange(len(sig))
 
-    # Segmentation of the PPG signal
+    # Segment the PPG signal into
     segments, segments_x = segmentation(
-        ppg=sig,
-        ppg_x=sig_indices,
+        sig=sig,
+        sig_indices=sig_indices,
         sampling_rate=sampling_rate,
         method='shifting',
-        segmentation_step=segmentation_step
+        shift_size=SHIFTING_SIZE,
+        segment_size=SEGMENT_SIZE,
     )
 
     # Initialize lists to store reliable and unreliable segments
@@ -203,12 +241,13 @@ def ppg_sqa(
     unreliable_segments_x = []
 
     # Loop through the segments for feature extraction and classification
-    for idx in range(len(segments)):
+    for idx, segment in enumerate(segments):
+
         # Feature extraction
-        features = feature_extraction(segments[idx], sampling_rate)
+        features = feature_extraction(segment, sampling_rate)
 
         # Classification
-        if(np.isnan(np.array(features)).any()):
+        if np.isnan(np.array(features)).any():
             pred = 1
         else:
             features_norm  = scaler.transform([features])
@@ -216,19 +255,32 @@ def ppg_sqa(
 
         # Categorize segments based on classification result
         if pred == 0:
-            reliable_segments.append(segments[i])
-            reliable_segments_x.append(segments_x[i])
+            reliable_segments.append(segment)
+            reliable_segments_x.append(segments_x[idx])
         else:
-            unreliable_segments.append(segments[i])
-            unreliable_segments_x.append(segments_x[i])
+            unreliable_segments.append(segment)
+            unreliable_segments_x.append(segments_x[idx])
 
-    # Generate lists of reliable and unreliable x values        
-    x_reliable = list(set([item for segment in reliable_segments_x for item in segment]))
+    # Generate lists of reliable and unreliable signals indices
+    x_reliable = list(set(
+        [item for segment in reliable_segments_x for item in segment]))
     x_unreliable = [item for item in sig_indices if item not in x_reliable]
 
     # Extract gaps (noisy parts) of the signal
     gaps = []
     for group in mit.consecutive_groups(x_unreliable):
         gaps.append(list(group))
-    gaps = [gaps[i] for i in range(len(gaps)) if len(gaps[i]) > segmentation_step]
+    gaps = [gaps[i] for i in range(len(gaps)) if len(gaps[i]) > SHIFTING_SIZE]
     return (x_reliable, gaps)
+
+
+if __name__ == "__main__":
+    # Import a sample data
+    FILE_NAME = "201902020222_Data.csv"
+    SAMPLING_FREQUENCY = 20
+    input_sig = get_data(file_name=FILE_NAME)
+
+    # Run PPG signal quality assessment.
+    x_reliable, gaps = ppg_sqa(sig=input_sig, sampling_rate=SAMPLING_FREQUENCY)
+    print(x_reliable)
+    # print(gaps)

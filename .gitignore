@@ -3,4 +3,5 @@ dist/
 build/
 E2E_PPG_Pipeline.egg-info/
 __pycache__
-*.pth
+venv
+.venv
