@@ -5,7 +5,7 @@ Created on Mon Oct 31 16:02:05 2022
 @author: mofeli
 """
 # Import necessary libraries and modules
-from PPG_SQA import PPG_SQA
+from ppg_sqa import PPG_SQA
 from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_ppg_extraction
 from PPG_HRV_Extraction import PPG_HRV_Extraction
