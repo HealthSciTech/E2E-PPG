@@ -9,10 +9,8 @@ from PPG_SQA import ppg_sqa
 from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_ppg_extraction
 from PPG_HRV_Extraction import PPG_HRV_Extraction
-from scipy.signal import resample
 from ppg_peak_detection import peak_detection
-from PPG_Filtering import PPG_bandpass_filter
-
+from utils import check_and_resample, bandpass_filter
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -22,18 +20,14 @@ warnings.filterwarnings("ignore")
 def HRV_Extraction(ppg, timestamp,  sample_rate, window_length_min, reconstruction_model_parameters):
     
     # Check if resampling is needed and perform resampling if necessary
-    if sample_rate != 20:
-        resampling_rate = 20/sample_rate
-        ppg = resample(ppg, int(len(ppg)*resampling_rate))
-        sample_rate = 20
-    
+    ppg, sample_rate = check_and_resample(sig=ppg, fs=sample_rate)
 
     # Bandpass filter parameters
     lowcut = 0.5  # Lower cutoff frequency in Hz
     highcut = 3  # Upper cutoff frequency in Hz
     
     # Apply bandpass filter
-    ppg_filtered = PPG_bandpass_filter(ppg, lowcut, highcut, sample_rate)
+    ppg_filtered = bandpass_filter(sig=ppg, fs=sample_rate, lowcut=lowcut, highcut=highcut)
 
     
     # Signal quality assessment

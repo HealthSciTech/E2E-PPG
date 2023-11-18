@@ -15,7 +15,7 @@ import neurokit2 as nk
 import more_itertools as mit
 import joblib
 from utils import normalize_data, get_data
-from PPG_Filtering import PPG_bandpass_filter
+from utils import bandpass_filter
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
@@ -30,7 +30,7 @@ def segmentation(
     sampling_rate: int,
     method: str = 'shifting',
     segment_size: int = 30,
-    shift_size: int = 5,
+    shift_size: int = 2,
 ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
     Segments the signals (PPG) and their indices into fixed-size segments.
@@ -230,8 +230,8 @@ def ppg_sqa(
         sig_indices=sig_indices,
         sampling_rate=sampling_rate,
         method='shifting',
-        shift_size=SHIFTING_SIZE,
         segment_size=SEGMENT_SIZE,
+        shift_size=SHIFTING_SIZE,
     )
 
     # Initialize lists to store reliable and unreliable segments
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     highcut = 3  # Upper cutoff frequency in Hz
     
     # Apply bandpass filter
-    filtered_sig = PPG_bandpass_filter(input_sig, lowcut, highcut, SAMPLING_FREQUENCY)
+    filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
 
     # Run PPG signal quality assessment.
     x_reliable, gaps = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
