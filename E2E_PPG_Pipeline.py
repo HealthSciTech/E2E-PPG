@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 
 
 
-def HRV_Extraction(ppg, timestamp,  sample_rate, window_length_min, reconstruction_model_parameters):
+def hrv_Extraction(ppg, timestamp,  sample_rate, window_length_min, reconstruction_model_parameters):
     
     # Check if resampling is needed and perform resampling if necessary
     ppg, sample_rate = check_and_resample(sig=ppg, fs=sample_rate)
@@ -34,7 +34,7 @@ def HRV_Extraction(ppg, timestamp,  sample_rate, window_length_min, reconstructi
     x_reliable, gaps = ppg_sqa(ppg_filtered, sample_rate)
     
     # PPG reconstruction for noises less than 15 sec using GAN model
-    ppg_signal, x_reliable, gaps = ppg_reconstruction(reconstruction_model_parameters[0], reconstruction_model_parameters[1] ,ppg_filtered, x_reliable, gaps, sample_rate)
+    ppg_signal, x_reliable, gaps = ppg_reconstruction(ppg_filtered, x_reliable, gaps, sample_rate, reconstruction_model_parameters[0], reconstruction_model_parameters[1])
     
     
     # Extract clean PPG segments for the specified window length

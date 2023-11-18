@@ -86,7 +86,7 @@ def heart_cycle_detection(
         sampling_rate: Sampling rate of the PPG signal.
     
     Returns:
-        beats: List of heart cycles
+        hc: List of heart cycles
     """
     # Normalization
     ppg_normalized = normalize_data(ppg)
@@ -99,12 +99,12 @@ def heart_cycle_detection(
     info  = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate)
     peaks = info["PPG_Peaks"]
     # Heart cycle detection based on the peaks and fixed intervals
-    beats = []
+    hc = []
     if len(peaks) < 2:
-        return beats
+        return hc
     # Define a fixed interval in PPG signal to detect heart cycles
     beat_bound = round((len(ppg_upsampled)/len(peaks))/2)
-    # We ignore the first and last beat to prevent boundary error
+    # Ignore the first and last beat to prevent boundary error
     for i in range(1, len(peaks) - 1):
         # Select beat from the signal and add it to the list
         beat_start = peaks[i] - beat_bound
@@ -112,22 +112,22 @@ def heart_cycle_detection(
         if beat_start >= 0 and beat_end < len(ppg_cleaned):
             beat = ppg_cleaned[beat_start:beat_end]
             if len(beat) >= beat_bound*2:
-                beats.append(beat)
-    return beats
+                hc.append(beat)
+    return hc
 
 
-def energy_hc(beats: list) -> float:
+def energy_hc(hc: list) -> float:
     """
     Extract energy of heart cycle
     
     Input parameters:
-        beats: List of heart cycles
+        hc: List of heart cycles
     
     Returns:
         var_energy: Variation of heart cycles energy
     """
     energy = []
-    for beat in beats:
+    for beat in hc:
         energy.append(np.sum(beat*beat))
     if not energy:
         var_energy = 0
@@ -137,24 +137,24 @@ def energy_hc(beats: list) -> float:
     return var_energy
 
 
-def template_matching_features(beats: list) -> Tuple[float, float]:
+def template_matching_features(hc: list) -> Tuple[float, float]:
     """
     Extract template matching features from heart cycles
     
     Input parameters:
-        beats: List of heart cycles
+        hc: List of heart cycles
     
     Returns:
         tm_ave_eu: Average of Euclidean distance with the template
         tm_ave_corr: Average of correlation with the template
     """
-    beats = np.array([np.array(xi) for xi in beats if len(xi) != 0])
-    # Calculate the template by averaging all beats
-    template = np.mean(beats, axis=0)
+    hc = np.array([np.array(xi) for xi in hc if len(xi) != 0])
+    # Calculate the template by averaging all heart cycles
+    template = np.mean(hc, axis=0)
     # Euclidean distance and correlation
     distances = []
     corrs = []
-    for beat in beats:
+    for beat in hc:
         distances.append(np.linalg.norm(template-beat))
         corr_matrix = np.corrcoef(template, beat)
         corrs.append(corr_matrix[0, 1])
@@ -185,13 +185,13 @@ def feature_extraction(
     std_p_spec = np.std(pxx_den)
 
     # Heart cycle detection
-    beats = heart_cycle_detection(ppg=ppg, sampling_rate=sampling_rate)
-    if beats:
+    hc = heart_cycle_detection(ppg=ppg, sampling_rate=sampling_rate)
+    if hc:
         # feature 3: variation in energy of heart cycles
-        var_energy = energy_hc(beats)
+        var_energy = energy_hc(hc)
 
         # features 4, 5: average Euclidean and Correlation in template matching
-        tm_ave_eu, tm_ave_corr = template_matching_features(beats)
+        tm_ave_eu, tm_ave_corr = template_matching_features(hc)
     else:
         var_energy = np.nan
         tm_ave_eu = np.nan
@@ -206,15 +206,24 @@ def ppg_sqa(
         sampling_rate: int,
 ) -> Tuple[list, list]:
     """
-    PPG Signal Quality Assessment.
+    Perform PPG Signal Quality Assessment (SQA).
     
     Input parameters:
-        sig: PPG signal.
-        sampling_rate: Sampling rate of the PPG signal.
+        sig (np.ndarray): PPG signal.
+        sampling_rate (int): Sampling rate of the PPG signal.
     
     Returns:
-        x_reliable: ...
-        gaps: ...
+        clean_indices: A list of clean indices.
+        noisy_indices: A list of noisy indices.
+        
+        
+    This function assesses the quality of a PPG signal by classifying its segments
+    as reliable (clean) or unrelaible (noisy) using a pre-trained model.
+
+    The clean indices represent parts of the PPG signal that are deemed reliable,
+    while the noisy indices indicate parts that may be affected by noise or artifacts.
+
+
     """
     # Load pre-trained model and normalization scaler
     scaler = joblib.load(os.path.join(MODEL_PATH, SCALER_FILE_NAME))
@@ -225,7 +234,7 @@ def ppg_sqa(
     sig_indices = np.arange(len(sig))
 
     # Segment the PPG signal into
-    segments, segments_x = segmentation(
+    segments, segments_indices = segmentation(
         sig=sig,
         sig_indices=sig_indices,
         sampling_rate=sampling_rate,
@@ -234,11 +243,11 @@ def ppg_sqa(
         shift_size=SHIFTING_SIZE,
     )
 
-    # Initialize lists to store reliable and unreliable segments
-    reliable_segments = []
-    unreliable_segments = []
-    reliable_segments_x = []
-    unreliable_segments_x = []
+    # Initialize lists to store all reliable and unreliable segments
+    reliable_segments_all = []
+    unreliable_segments_all = []
+    reliable_indices_all = []
+    unreliable_indices_all = []
 
     # Loop through the segments for feature extraction and classification
     for idx, segment in enumerate(segments):
@@ -255,23 +264,25 @@ def ppg_sqa(
 
         # Categorize segments based on classification result
         if pred == 0:
-            reliable_segments.append(segment)
-            reliable_segments_x.append(segments_x[idx])
+            reliable_segments_all.append(segment)
+            reliable_indices_all.append(segments_indices[idx])
         else:
-            unreliable_segments.append(segment)
-            unreliable_segments_x.append(segments_x[idx])
+            unreliable_segments_all.append(segment)
+            unreliable_indices_all.append(segments_indices[idx])
 
-    # Generate lists of reliable and unreliable signals indices
-    x_reliable = list(set(
-        [item for segment in reliable_segments_x for item in segment]))
-    x_unreliable = [item for item in sig_indices if item not in x_reliable]
+    # Generate flatten lists of reliable indices as clean indices
+    clean_indices = list(set([item for segment in reliable_indices_all for item in segment]))
+    
+    # The indices that dont exist in the flat list of clean indices indicate unreliable indices
+    unreliable_indices = [item for item in sig_indices if item not in clean_indices]
 
-    # Extract gaps (noisy parts) of the signal
-    gaps = []
-    for group in mit.consecutive_groups(x_unreliable):
-        gaps.append(list(group))
-    gaps = [gaps[i] for i in range(len(gaps)) if len(gaps[i]) > SHIFTING_SIZE]
-    return (x_reliable, gaps)
+    # Unflat the unreliable_indices list to separte noisy parts
+    noisy_indices = []
+    for group in mit.consecutive_groups(unreliable_indices):
+        noisy_indices.append(list(group))
+    noisy_indices = [noisy_indices[i] for i in range(len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
+    
+    return clean_indices, noisy_indices
 
 
 if __name__ == "__main__":
@@ -289,6 +300,16 @@ if __name__ == "__main__":
     filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
 
     # Run PPG signal quality assessment.
-    x_reliable, gaps = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
-    print(x_reliable)
-    # print(gaps)
+    clean_indices, noisy_indices = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
+
+
+    # Display results
+    print("Analysis Results:")
+    print("------------------")
+    print(f"Length of the clean signal (in seconds): {len(clean_indices)/SAMPLING_FREQUENCY:.2f}")
+    print(f"Number of noisy parts in the signal: {len(noisy_indices)}")
+    
+    if len(noisy_indices) > 0:
+        print("Length of each noise in the signal (in seconds):")
+        for noise in noisy_indices:
+            print(f"   - {len(noise)/SAMPLING_FREQUENCY:.2f}")
