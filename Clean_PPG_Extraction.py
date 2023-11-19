@@ -7,81 +7,148 @@ Created on Wed Nov  2 15:02:33 2022
 
 # Import necessary library
 import pandas as pd
+import numpy as np
+from utils import get_data, bandpass_filter
+from PPG_SQA import ppg_sqa
+from PPG_Reconstruction import ppg_reconstruction
 
-# Define a function to extract clean PPG segments based on quality information
-def clean_ppg_extraction(ppg_signal, gaps, window_length_min, sample_rate, timestamp):
+
+
+def clean_segments_extraction(
+        sig: np.ndarray,
+        noisy_indices: list,
+        window_length: int) -> list:
+    
     """
-    Extract clean PPG segments from the input signal based on quality information.
+    Scan the clean parts of the signal and extract clean segments based on the input window length.
     
-    Parameters:
-    - ppg_signal (numpy.ndarray): PPG signal.
-    - gaps (list): List of noisy segments in the signal.
-    - window_length_min (float): Length of the clean PPG segments in minutes.
-    - sample_rate (int): Sampling rate of the PPG signal.
-    - timestamp (numpy.ndarray): Timestamps corresponding to the PPG signal.
-    
+    Input parameters:
+        sig (numpy.ndarray): Input PPG signal.
+        noisy_indices (list): List of noisy segment indices.
+        window_length (int): Desired window length for clean segment extraction in terms of samples.
+        
     Returns:
-    - clean_segments (list): List of clean PPG segments.
-    - start_timestamp_segments (list): List of corresponding start timestamps for clean segments.
+        clean_segments (list): List of clean PPG segments with the specified window length and their starting index.
     """
     
-    # Define a nested function to find clean parts in the quality list
-    def find_clean_parts(quality_lst):
-        # returns clean indexes (start and end) in a list of tuples
-        # in the quality list, 0 indicates clean and 1 indicates noisy
-        result = []
+    def find_clean_parts(quality_lst:list) -> list:
+        '''
+        Scan the quality vector and find the start and end indices of clean parts.
+
+        Input parameters:
+            quality_lst (list): Quality vector of the signal (0 indictes clean and 1 indicates noisy)
+                
+        Returns
+            start_end_clean (list): Start and end indices of the clean parts in a list of tuples
+        '''
+        
+        start_end_clean = []
         start = 0
         for i in range(len(quality_lst)-1):
             if quality_lst[start] == quality_lst[i+1]:
                 if i+1 == len(quality_lst)-1:
                     end = i+1
                     if quality_lst[start] == 0:
-                        result.append((start,end))
+                        start_end_clean.append((start,end))
                 else:
                     continue
                 
             else:
                 end = i
                 if quality_lst[start] == 0:
-                    result.append((start,end))
+                    start_end_clean.append((start,end))
                     
                 start = i+1
         
-        return result
+        return start_end_clean
     
-    # Create a new DataFrame to store timestamp, PPG, and quality information
-    new_data = pd.DataFrame(columns=['timestamp','ppg','quality'])
-    new_data['timestamp'] = timestamp
-    flat_list_gap = [item for gap in gaps for item in gap]
-    quality = [1 if i in flat_list_gap else 0 for i in range(len(ppg_signal))]
-    new_data['quality'] = quality
-    new_data['ppg'] = ppg_signal
     
-    # Find clean indexes in the quality list
-    clean_indexes = find_clean_parts(new_data['quality'].tolist())
+    # Create a new DataFrame to store PPG, and quality information
+    quality_df = pd.DataFrame(columns=['ppg','quality'])
     
-    # Calculate the window length in terms of samples
-    window_length = window_length_min*60*sample_rate
+    # Flatten the noise indices list
+    flat_list_noise = [item for noise in noisy_indices for item in noise]
     
-    # Initialize lists to store clean segments and start timestamps
+    # Define a quality vector (0 indictes clean and 1 indicates noisy)
+    quality = [1 if i in flat_list_noise else 0 for i in range(len(sig))]
+    
+    # Store ppg signal with quality vector in dataframe
+    quality_df['quality'] = quality
+    quality_df['ppg'] = sig
+    
+    # Find start and end indices of clean parts in the quality list
+    start_end_clean_idx = find_clean_parts(quality_df['quality'].tolist())
+    
+    # Initialize a list to store total clean segments with the specified window length
     clean_segments = []
-    start_timestamp_segments = []
-    
+
     # Extract clean segments based on window length
-    for item in clean_indexes:
-        if (item[1]-item[0]) >= window_length:
-            ppg_clean = new_data.iloc[item[0]:item[1]][['timestamp', 'ppg']]
-            index = item[0]
-            # Iterate through the clean segment with the specified window length
-            while(index<item[1]):
-                clean_segment = ppg_clean.loc[index:index+window_length-1]['ppg']
-                start_timestamp = ppg_clean.loc[index]['timestamp']
+    for indices in start_end_clean_idx:
+        # Check if the current clean part has the required window length
+        if (indices[1] - indices[0]) >= window_length:
+            # Select the current clean part
+            clean_part = quality_df['ppg'][indices[0] : indices[1]].tolist()
+            
+            # Calculate the number of segments with the specified window length that can be extarcted from the current clean part
+            num_segments = len(clean_part) // window_length
+            
+            # Extract clean segment with the specified window length from current clean part and their starting indices
+            segments = [((indices[0] + i * window_length), clean_part[i * window_length: (i + 1) * window_length]) for i in range(num_segments)]
+            
+            # Add extracted segments to total clean segments
+            clean_segments.extend(segments)
+
                 
-                # Check if the clean segment has the required length
-                if len(clean_segment) == window_length:
-                    clean_segments.append(clean_segment)
-                    start_timestamp_segments.append(start_timestamp)
-                index = index + window_length
-                
-                
-    return clean_segments, start_timestamp_segments
+    return clean_segments
+
+
+
+
+if __name__ == "__main__":
+    # Import a sample data
+    FILE_NAME = "201902020222_Data.csv"
+    SAMPLING_FREQUENCY = 20
+    input_sig = get_data(file_name=FILE_NAME)
+    
+    # Bandpass filter parameters
+    lowcut = 0.5  # Lower cutoff frequency in Hz
+    highcut = 3  # Upper cutoff frequency in Hz
+    
+    # Apply bandpass filter
+    filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
+
+    # Run PPG signal quality assessment.
+    clean_indices, noisy_indices = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
+    
+    execfile('GAN.py')
+    reconstruction_model_parameters = [G, device]
+    
+    # Run PPG reconstruction
+    ppg_signal, clean_indices, noisy_indices = ppg_reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=SAMPLING_FREQUENCY, generator=G, device=device)
+    
+    # Define a window length for clean segments extraction (in seconds)
+    WINDOW_LENGTH_SEC = 90
+    # Calculate the window length in terms of samples
+    window_length = WINDOW_LENGTH_SEC*SAMPLING_FREQUENCY
+    
+    # Scan clean parts of the signal and extract clean segments with the specified window length
+    clean_segments = clean_segments_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
+    
+    # Display results
+    print("Analysis Results:")
+    print("------------------")
+    # Check if clean segments are found, if not, print a message
+    if len(clean_segments) == 0:
+        print('No clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segment was detected in the signal!')
+    else:
+        # Print the number of clean segments found
+        print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
+        print("Starting index of each segment in seconds:")
+        for seg in clean_segments:
+            print(int(seg[0] / SAMPLING_FREQUENCY))
+    
+    
+    
+    
+    
+    

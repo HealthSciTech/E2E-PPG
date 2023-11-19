@@ -11,6 +11,7 @@ from typing import List, Tuple
 import os
 from scipy.signal import resample
 from scipy.signal import butter, filtfilt
+import neurokit2 as nk
 
 def get_data(
         file_name: str,
@@ -156,8 +157,37 @@ def bandpass_filter(
 
     return sig_filtered
 
+
         
-        
-        
+def find_peaks(
+        ppg: np.ndarray,
+        sampling_rate: int,
+        return_sig: bool = False):
+    """
+    Find peaks in PPG.
+
+    Parameters:
+    - ppg (np.ndarray): The input PPG signal.
+    - sampling_rate (int): The sampling rate of the signal.
+    - return_sig (bool, optional): If True, return the cleaned PPG signal along with the peak indices (default is False).
+
+    Returns:
+    - np.ndarray: An array containing the indices of the detected peaks in the PPG signal.
+    - Optional: If return_sig is True, also returns the cleaned PPG signal.
+
+    """
+
+    # Clean the PPG signal and prepare it for peak detection
+    ppg_cleaned = nk.ppg_clean(ppg, sampling_rate=sampling_rate)
+
+    # Peak detection
+    info = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate)
+    peaks = info["PPG_Peaks"]
+
+    # Return either just the peaks or both the cleaned signal and peaks
+    if return_sig:
+        return ppg_cleaned, peaks
+    else:
+        return peaks
         
         

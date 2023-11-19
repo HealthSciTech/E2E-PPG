@@ -11,11 +11,9 @@ from typing import Tuple, List
 import numpy as np
 from scipy import stats
 from scipy import signal
-import neurokit2 as nk
 import more_itertools as mit
 import joblib
-from utils import normalize_data, get_data
-from utils import bandpass_filter
+from utils import normalize_data, get_data, bandpass_filter, find_peaks
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
@@ -93,11 +91,10 @@ def heart_cycle_detection(
     # Upsampling signal by 2
     sampling_rate = sampling_rate*2
     ppg_upsampled = signal.resample(ppg_normalized, len(ppg_normalized)*2)
-    # Clean PPG signal and prepare it for peak detection
-    ppg_cleaned = nk.ppg_clean(ppg_upsampled, sampling_rate=sampling_rate)
+    
     # Systolic peak detection
-    info  = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate)
-    peaks = info["PPG_Peaks"]
+    ppg_cleaned, peaks = find_peaks(ppg=ppg_upsampled, sampling_rate=sampling_rate, return_sig=True)
+
     # Heart cycle detection based on the peaks and fixed intervals
     hc = []
     if len(peaks) < 2:
