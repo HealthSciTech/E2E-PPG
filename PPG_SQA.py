@@ -88,6 +88,7 @@ def heart_cycle_detection(
     """
     # Normalization
     ppg_normalized = normalize_data(ppg)
+    
     # Upsampling signal by 2
     sampling_rate = sampling_rate*2
     ppg_upsampled = signal.resample(ppg_normalized, len(ppg_normalized)*2)

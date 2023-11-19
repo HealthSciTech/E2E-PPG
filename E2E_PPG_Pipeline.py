@@ -52,10 +52,10 @@ def e2e_hrv_extraction(ppg, timestamp,  sampling_rate, window_length_sec, recons
         print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
 
         # Run PPG Peak detection
-        peaks, sample_rate_new = peak_detection(clean_segments, sampling_rate)
+        peaks, sampling_rate_new = peak_detection(clean_segments, sampling_rate)
         
         # Perform HRV extraction
-        hrv_data = PPG_HRV_Extraction(clean_segments, start_timestamp_segments, peaks, sample_rate_new, window_length_min)
+        hrv_data = PPG_HRV_Extraction(clean_segments, start_timestamp_segments, peaks, sampling_rate_new, window_length_min)
 
     print('Done!')
     return hrv_data
