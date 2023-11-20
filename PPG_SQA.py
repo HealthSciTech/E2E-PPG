@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 31 16:07:50 2022
 
-@author: mofeli
-"""
-# Import necessary libraries and modules
 import pickle
 import os
 from typing import Tuple, List
 import numpy as np
-from scipy import stats
-from scipy import signal
+from scipy import stats, signal
 import more_itertools as mit
 import joblib
-from utils import normalize_data, get_data, bandpass_filter, find_peaks
+from utils import normalize_data, get_data, bandpass_filter, find_peaks, check_and_resample
+import warnings
+warnings.filterwarnings("ignore")
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
@@ -198,8 +194,8 @@ def feature_extraction(
     return features
 
 
-# Main function for PPG Signal Quality Assessment
-def ppg_sqa(
+
+def sqa(
         sig: np.ndarray,
         sampling_rate: int,
 ) -> Tuple[list, list]:
@@ -289,16 +285,18 @@ if __name__ == "__main__":
     SAMPLING_FREQUENCY = 20
     input_sig = get_data(file_name=FILE_NAME)
     
+    # Check if resampling is needed and perform resampling if necessary
+    input_sig, sampling_rate = check_and_resample(sig=input_sig, fs=SAMPLING_FREQUENCY)
     
     # Bandpass filter parameters
     lowcut = 0.5  # Lower cutoff frequency in Hz
     highcut = 3  # Upper cutoff frequency in Hz
     
     # Apply bandpass filter
-    filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
+    filtered_sig = bandpass_filter(sig=input_sig, fs=sampling_rate, lowcut=lowcut, highcut=highcut)
 
     # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
+    clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
 
 
     # Display results

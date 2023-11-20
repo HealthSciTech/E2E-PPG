@@ -1,28 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Nov  2 11:44:39 2022
 
-@author: mofeli
-"""
-# Import necessary libraries and modules
-
-
-from PPG_SQA import ppg_sqa
+from ppg_sqa import sqa
 from sklearn import preprocessing
 import numpy as np
 from scipy.signal import resample
 import torch
-from utils import find_peaks
+from utils import find_peaks, check_and_resample, get_data, bandpass_filter
 from typing import Tuple
-from utils import get_data, bandpass_filter
+import warnings
+warnings.filterwarnings("ignore")
 
 UPSAMPLING_RATE = 2
 #Maximum reconstruction length (in seconds):
 MAX_RECONSTRUCTION_LENGTH_SEC = 15
 
 
-# Define a function to reconstruct a noise in the PPG signal using the GAN generator
-def reconstruct(
+def gan_rec(
         ppg_clean: np.ndarray,
         noise: list,
         sampling_rate: int,
@@ -96,7 +89,7 @@ def reconstruct(
     return reconstructed_noise
 
 
-def ppg_reconstruction(
+def reconstruction(
         sig: np.ndarray,
         clean_indices: list,
         noisy_indices:list,
@@ -137,8 +130,8 @@ def ppg_reconstruction(
             if noise_start_idx >= max_rec_length:
                 # Check if the preceding signal is clean
                 if set(range(noise_start_idx - max_rec_length, noise_start_idx)).issubset(clean_indices):
-                    # Perform noise reconstruction for the current n
-                    reconstructed_noise = reconstruct(sig[noise_start_idx - max_rec_length : noise_start_idx], noise, sampling_rate, generator, device)
+                    # Perform noise reconstruction for the current noise
+                    reconstructed_noise = gan_rec(sig[noise_start_idx - max_rec_length : noise_start_idx], noise, sampling_rate, generator, device)
                     
                     # Upsample the reconstructed noise
                     reconstructed_noise_res = resample(reconstructed_noise, int(len(reconstructed_noise)*UPSAMPLING_RATE))
@@ -208,7 +201,7 @@ def ppg_reconstruction(
                     reconstruction_flag = True
                     
                     # Perform the signal quality assessment to ensure that the reconstructed signal is not distorted
-                    clean_indices, noisy_indices = ppg_sqa(sig=ppg_descaled, sampling_rate=sampling_rate)
+                    clean_indices, noisy_indices = sqa(sig=ppg_descaled, sampling_rate=sampling_rate)
     
     # Check if there was a reconstruction
     if reconstruction_flag == True:
@@ -226,22 +219,24 @@ if __name__ == "__main__":
     SAMPLING_FREQUENCY = 20
     input_sig = get_data(file_name=FILE_NAME)
     
+    # Check if resampling is needed and perform resampling if necessary
+    input_sig, sampling_rate = check_and_resample(sig=input_sig, fs=SAMPLING_FREQUENCY)
     
     # Bandpass filter parameters
     lowcut = 0.5  # Lower cutoff frequency in Hz
     highcut = 3  # Upper cutoff frequency in Hz
     
     # Apply bandpass filter
-    filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
+    filtered_sig = bandpass_filter(sig=input_sig, fs=sampling_rate, lowcut=lowcut, highcut=highcut)
 
     # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
+    clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
     
     execfile('GAN.py')
     reconstruction_model_parameters = [G, device]
     
     # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = ppg_reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=SAMPLING_FREQUENCY, generator=G, device=device)
+    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate, generator=G, device=device)
     
     # Display results
     print("Analysis Results:")

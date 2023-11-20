@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 from typing import List, Tuple
 import os
-from scipy.signal import resample
-from scipy.signal import butter, filtfilt
+from scipy.signal import resample, butter, filtfilt
 import neurokit2 as nk
 
 def get_data(

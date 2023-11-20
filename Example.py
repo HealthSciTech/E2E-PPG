@@ -1,39 +1,30 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Nov 15 11:34:29 2023
 
-@author: mofeli
-"""
-
-import pandas as pd
-from  E2E_PPG_Pipeline import e2e_hrv_extraction
-
-# Specify the input file and sample rate
-file = 'data/201902020222_Data.csv'
-sample_rate = 20
+import os
+from e2e_ppg_pipeline import e2e_hrv_extraction
+from utils import get_data
+import warnings
+warnings.filterwarnings("ignore")
 
 
-try:
-    # Attempt to load data from the specified CSV file
-    input_data = pd.read_csv(file, delim_whitespace=True, usecols=['timestamp','ppg'])
-    ppg = input_data['ppg'].to_numpy()
-    timestamp = input_data['timestamp'].to_numpy()
-except:
-    print('The input file can not be read, check the data type please!')
+# Import a sample data
+FILE_NAME = "201902020222_Data.csv"
+SAMPLING_FREQUENCY = 20
+input_sig = get_data(file_name=FILE_NAME)
     
-# Execute GAN.py script to import GAN model for PPG reconstruction
+# Execute GAN.py script to import GAN generator for PPG reconstruction
 execfile('GAN.py')
-reconstruction_model_parameters = [G, device]
+reconstruction_params = [G, device]
 
 # Set the window length for HR and HRV extraction in seconds
 window_length_sec = 90
 
-# Extract HRV features from the raw PPG signal using the E2E_PPG_Pipeline
-hrv_data = e2e_hrv_extraction(ppg, timestamp, sample_rate, window_length_sec, reconstruction_model_parameters)
+# Extract HRV parameters from the input PPG signal
+hrv_data = e2e_hrv_extraction(input_sig=input_sig, sampling_rate=SAMPLING_FREQUENCY, window_length_sec=window_length_sec, reconstruction_params=reconstruction_params)
+
+
+# Output file name
+OUTPUT_FILENAME = 'HRV_' + FILE_NAME
 
 # Save HRV data to a CSV file
-# filename = 'HRV_' + file
-# hrv_data.to_csv(filename, index=False)
-
-
-hrv_data.to_csv('HRV_data.csv', index=False)
+hrv_data.to_csv(os.path.join('data', OUTPUT_FILENAME), index=False)

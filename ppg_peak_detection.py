@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 14 12:01:36 2023
-
-@author: mofeli
-"""
 
 import neurokit2 as nk
 import heartpy as hp
+from heartpy.datautils import rolling_mean
 import numpy as np
 from scipy import signal
-from peak_detection import PPG_Peak
-from heartpy.datautils import rolling_mean
-from PPG_SQA import ppg_sqa
-from PPG_Reconstruction import ppg_reconstruction
-from Clean_PPG_Extraction import clean_segments_extraction
-from utils import normalize_data, get_data, bandpass_filter
+from kazemi_peak_detection import ppg_peaks
+from ppg_sqa import sqa
+from ppg_reconstruction import reconstruction
+from ppg_clean_extraction import clean_seg_extraction
+from utils import normalize_data, get_data, bandpass_filter, check_and_resample
 from typing import Tuple
-
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def peak_detection(
@@ -67,7 +63,7 @@ def peak_detection(
         # Kazemi method
         for i in range(len(clean_segments)):
             # Perform peak detection
-            peaks, sampling_rate_new = PPG_Peak(np.asarray(clean_segments[i][1]), sampling_rate, seconds = 15, overlap = 0, minlen = 15)
+            peaks, sampling_rate_new = ppg_peaks(np.asarray(clean_segments[i][1]), sampling_rate, seconds = 15, overlap = 0, minlen = 15)
             
             # Add peaks of the current segment to the total peaks
             total_peaks.append(peaks)
@@ -102,30 +98,33 @@ if __name__ == "__main__":
     SAMPLING_FREQUENCY = 20
     input_sig = get_data(file_name=FILE_NAME)
     
+    # Check if resampling is needed and perform resampling if necessary
+    input_sig, sampling_rate = check_and_resample(sig=input_sig, fs=SAMPLING_FREQUENCY)
+    
     # Bandpass filter parameters
     lowcut = 0.5  # Lower cutoff frequency in Hz
     highcut = 3  # Upper cutoff frequency in Hz
     
     # Apply bandpass filter
-    filtered_sig = bandpass_filter(sig=input_sig, fs=SAMPLING_FREQUENCY, lowcut=lowcut, highcut=highcut)
+    filtered_sig = bandpass_filter(sig=input_sig, fs=sampling_rate, lowcut=lowcut, highcut=highcut)
 
     # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = ppg_sqa(sig=filtered_sig, sampling_rate=SAMPLING_FREQUENCY)
+    clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
     
     execfile('GAN.py')
     reconstruction_model_parameters = [G, device]
     
     # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = ppg_reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=SAMPLING_FREQUENCY, generator=G, device=device)
+    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate, generator=G, device=device)
     
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90
     
     # Calculate the window length in terms of samples
-    window_length = WINDOW_LENGTH_SEC*SAMPLING_FREQUENCY
+    window_length = WINDOW_LENGTH_SEC*sampling_rate
     
     # Scan clean parts of the signal and extract clean segments with the specified window length
-    clean_segments = clean_segments_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
+    clean_segments = clean_seg_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
     
     # Display results
     print("Analysis Results:")
@@ -134,11 +133,11 @@ if __name__ == "__main__":
     if len(clean_segments) == 0:
         print('No clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segment was detected in the signal!')
     else:
-        # Print the number of clean segments found
+        # Print the number of detected clean segments
         print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
         
         # Run PPG Peak detection
-        peaks, sampling_rate_new = peak_detection(clean_segments, SAMPLING_FREQUENCY)
+        peaks, sampling_rate_new = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate, method='kazemi')
         print("Number of detected peaks in each segment:")
         for pks in peaks:
             print(len(pks))

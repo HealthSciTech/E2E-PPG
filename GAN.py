@@ -1,28 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Nov  3 17:41:36 2022
 
-@author: mofeli
-"""
 import torch
-import torchvision
 from torch import nn
-from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from torchvision import transforms
-from torch.utils.data import DataLoader
+import os
 
-
+MODEL_PATH = "models"
+GAN_MODEL_FILE_NAME = 'GAN_model.pth'
 
 if __name__ == '__main__':
     use_gpu = torch.cuda.is_available()
 
-    #encoder
-    #decoder
-    
-    #Generator = encoder + decoder + encoder
-    #Discriminator = encoder
-    
     batch_size = 256
     
     encoder1 = nn.Sequential(
@@ -157,7 +144,7 @@ if __name__ == '__main__':
     LR_D = 1e-4
     
     
-    #netg.apply(weights_init)
+
     
     #loss functions
     loss_adv = nn.MSELoss()
@@ -168,17 +155,9 @@ if __name__ == '__main__':
     optimizer_G = torch.optim.Adam(G.parameters(),lr=LR_G, weight_decay=1e-4)
     optimizer_D = torch.optim.Adam(D.parameters(),lr=LR_D, weight_decay=1e-4)
     
-    # if use_gpu:
-    #     G = G.to(device)
-    #     D = D.to(device)
-    #     loss_adv = loss_adv.to(device)
-    #     loss_con = loss_con.to(device)
-    #     loss_enc = loss_enc.to(device)
-    #     loss_bce = loss_bce.to(device)
-    #     real_label = real_label.to(device)
-    #     fake_label = fake_label.to(device)
+
     
-    G = torch.load("989th_5s_G_5s_1-4.pth", map_location=torch.device('cpu'))
+    G = torch.load(os.path.join(MODEL_PATH, GAN_MODEL_FILE_NAME), map_location=torch.device('cpu'))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
     
