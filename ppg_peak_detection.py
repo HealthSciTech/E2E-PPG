@@ -15,14 +15,14 @@ from PPG_SQA import ppg_sqa
 from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_segments_extraction
 from utils import normalize_data, get_data, bandpass_filter
-
+from typing import Tuple
 
 
 
 def peak_detection(
         clean_segments: list, 
         sampling_rate: int, 
-        method: str ='nk'):
+        method: str ='nk') -> Tuple[list, int]:
     '''
     Detect peaks in clean PPG segments using specified peak detection method.
     
@@ -120,14 +120,12 @@ if __name__ == "__main__":
     
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90
+    
     # Calculate the window length in terms of samples
     window_length = WINDOW_LENGTH_SEC*SAMPLING_FREQUENCY
     
     # Scan clean parts of the signal and extract clean segments with the specified window length
     clean_segments = clean_segments_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
-    
-    # Run PPG Peak detection
-    peaks, sampling_rate_new = peak_detection(clean_segments, SAMPLING_FREQUENCY)
     
     # Display results
     print("Analysis Results:")
@@ -138,6 +136,9 @@ if __name__ == "__main__":
     else:
         # Print the number of clean segments found
         print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
+        
+        # Run PPG Peak detection
+        peaks, sampling_rate_new = peak_detection(clean_segments, SAMPLING_FREQUENCY)
         print("Number of detected peaks in each segment:")
         for pks in peaks:
             print(len(pks))

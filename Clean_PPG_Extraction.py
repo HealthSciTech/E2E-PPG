@@ -128,6 +128,7 @@ if __name__ == "__main__":
     
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90
+    
     # Calculate the window length in terms of samples
     window_length = WINDOW_LENGTH_SEC*SAMPLING_FREQUENCY
     

@@ -8,7 +8,7 @@ Created on Mon Oct 31 16:02:05 2022
 from PPG_SQA import ppg_sqa
 from PPG_Reconstruction import ppg_reconstruction
 from Clean_PPG_Extraction import clean_segments_extraction
-from PPG_HRV_Extraction import PPG_HRV_Extraction
+from PPG_HRV_Extraction import hrv_extraction
 from ppg_peak_detection import peak_detection
 from utils import check_and_resample, bandpass_filter
 
@@ -36,7 +36,8 @@ def e2e_hrv_extraction(ppg, timestamp,  sampling_rate, window_length_sec, recons
     clean_indices, noisy_indices = ppg_sqa(sig=ppg_filtered, sampling_rate=sampling_rate)
     
     # Run PPG reconstruction 
-    ppg_signal, clean_indices, noisy_indices = ppg_reconstruction(ppg_filtered, clean_indices, noisy_indices, sampling_rate, reconstruction_model_parameters[0], reconstruction_model_parameters[1])
+    ppg_signal, clean_indices, noisy_indices = ppg_reconstruction(sig=ppg_filtered, clean_indices=clean_indices, noisy_indices=noisy_indices, 
+                                                                  sampling_rate=sampling_rate, generator=reconstruction_model_parameters[0], device=reconstruction_model_parameters[1])
     
     # Calculate the window length for HR and HRV extraction in terms of samples
     window_length = window_length_sec*sampling_rate
@@ -44,18 +45,27 @@ def e2e_hrv_extraction(ppg, timestamp,  sampling_rate, window_length_sec, recons
     # Scan clean parts of the signal and extract clean segments with the specified window length
     clean_segments = clean_segments_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
     
+    # Display results
+    print("Analysis Results:")
+    print("------------------")
     # Check if clean segments are found, if not, print a message
     if len(clean_segments) == 0:
         print('No clean ' + str(window_length_sec) + ' seconds segment was detected in the signal!')
     else:
         # Print the number of clean segments found
         print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
-
+        
         # Run PPG Peak detection
         peaks, sampling_rate_new = peak_detection(clean_segments, sampling_rate)
         
-        # Perform HRV extraction
-        hrv_data = PPG_HRV_Extraction(clean_segments, start_timestamp_segments, peaks, sampling_rate_new, window_length_min)
+        # Update window length based on the new sampling rate
+        window_length_new = window_length_sec*sampling_rate_new
+        
+        # Perform HR and HRV extraction
+        hrv_data = hrv_extraction(clean_segments=clean_segments, peaks=peaks, sampling_rate=sampling_rate_new, window_length=window_length_new)
+        print("HR and HRV parameters:")
+        print(hrv_data)
+
 
     print('Done!')
     return hrv_data
