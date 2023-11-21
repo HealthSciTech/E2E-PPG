@@ -5,14 +5,109 @@ from sklearn import preprocessing
 import numpy as np
 from scipy.signal import resample
 import torch
+from torch import nn
 from utils import find_peaks, check_and_resample, get_data, bandpass_filter
 from typing import Tuple
+import os
+import __main__
 import warnings
 warnings.filterwarnings("ignore")
 
-UPSAMPLING_RATE = 2
+
 #Maximum reconstruction length (in seconds):
 MAX_RECONSTRUCTION_LENGTH_SEC = 15
+
+UPSAMPLING_RATE = 2
+
+MODEL_PATH = "models"
+GAN_MODEL_FILE_NAME = 'GAN_model.pth'
+
+#Define the device
+use_gpu = torch.cuda.is_available()
+
+#Define the convolutional encoder structure for generator
+encoder1 = nn.Sequential(
+    nn.Conv1d(1,32, kernel_size=4, stride = 2, padding = 0,bias=False, padding_mode='replicate'),
+    nn.ReLU(),
+    nn.Conv1d(32,64, kernel_size = 4, stride =2, padding =0,bias=False, padding_mode='replicate'),
+    nn.InstanceNorm1d(64),
+    nn.ReLU(),
+    nn.Conv1d(64,128, kernel_size = 4, stride =2, padding =0,bias=False, padding_mode='replicate'),
+    nn.InstanceNorm1d(128),
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Conv1d(128,128, kernel_size = 4, stride =2,padding = 0, bias=False),
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Conv1d(128,128, kernel_size = 4, stride =2, padding=1, bias=False),
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Conv1d(128,128, kernel_size = 4, stride =2, padding=1, bias=False),
+    nn.ReLU(),
+    nn.Dropout(0.5),    
+    
+)
+
+#Define the second convolutional encoder structure for generator
+encoder2 = nn.Sequential(
+    nn.Conv1d(1,32, kernel_size=4, stride = 2, padding = 0,bias=False, padding_mode='replicate'),
+    nn.ReLU(),
+    nn.Conv1d(32,64, kernel_size = 4, stride =2, padding =0,bias=False, padding_mode='replicate'),
+    nn.InstanceNorm1d(64),
+    nn.ReLU(),
+    nn.Conv1d(64,128, kernel_size = 4, stride =2, padding =0,bias=False, padding_mode='replicate'),
+    nn.InstanceNorm1d(128),
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Conv1d(128,128, kernel_size = 4, stride =2,bias=False),
+    nn.ReLU(),
+    nn.Dropout(0.5)
+    
+)
+
+
+#Define the transposed convolutional decoder structure for generator
+decoder = nn.Sequential(
+    nn.ConvTranspose1d(128, 128, kernel_size=4, stride=2, output_padding=1, bias=False),
+    nn.InstanceNorm1d(128),
+    nn.ReLU(inplace=True),
+    nn.Dropout(0.5),
+    nn.ConvTranspose1d(128, 64, kernel_size=4, stride=2, output_padding=0, bias=False),
+    nn.InstanceNorm1d(64),
+    nn.ReLU(inplace=True),
+    nn.ConvTranspose1d(64, 32, kernel_size=4, stride=2, output_padding=0, bias=False),
+    nn.InstanceNorm1d(32),
+    nn.ReLU(inplace=True),
+)
+
+#Define the generator structure
+class Generator(nn.Module):
+    def __init__(self):
+        super(Generator, self).__init__()
+
+        self.encoder1 = encoder1
+        self.decoder = decoder
+        self.encoder2 = encoder2
+
+        self.final = nn.Sequential(
+            nn.Upsample(scale_factor=2),
+            nn.ConstantPad1d((1, 1), 0),
+            nn.Conv1d(32, 1, 4, padding=1,
+                      padding_mode='replicate'),
+            nn.ReLU(inplace = True)
+        ) 
+        self.fc1 = nn.Linear(101,100)
+
+    def forward(self,x):
+        latent_i = self.encoder1(x)#Apply the first encoder as feature extractor
+        gen_img = self.decoder(latent_i)#Reconstruct the signal from latent feature
+
+        #Forward functions for model training purpose
+        fin_cov = self.final(gen_img)
+        fin_cov = fin_cov.view(256,-1)
+        y = self.fc1(fin_cov)
+        latent_o = self.encoder2(y.reshape(256,1,-1))
+        return y,  latent_o
 
 
 def gan_rec(
@@ -89,12 +184,12 @@ def gan_rec(
     return reconstructed_noise
 
 
+
 def reconstruction(
         sig: np.ndarray,
         clean_indices: list,
         noisy_indices:list,
-        sampling_rate: int,
-        generator,device) -> Tuple[np.ndarray, list, list]:
+        sampling_rate: int) -> Tuple[np.ndarray, list, list]:
     
     '''
     Main function for PPG reconstruction.
@@ -104,8 +199,6 @@ def reconstruction(
     - clean_indices (list): List of indices representing clean parts.
     - noisy_indices (list): List of indices representing noisy parts.
     - sampling_rate (int): Sampling rate of the signal.
-    - generator: GAN generator for noise reconstruction.
-    - device: Device on which to run the generator.
 
     Returns:
     - ppg_signal (np.ndarray): Reconstructed PPG signal (if reconstruction is applied; otherwise, returns the original signal).
@@ -113,6 +206,14 @@ def reconstruction(
     - noisy_indices (list): Updated indices of noisy parts (if reconstruction is applied;, otherwise, returns the original indices of noisy parts).
 
     '''
+    
+    # Set the Generator class in the main module for compatibility with the saved GAN model
+    setattr(__main__, "Generator", Generator)
+    
+    # Load GAN model parameters
+    generator = torch.load(os.path.join(MODEL_PATH, GAN_MODEL_FILE_NAME), map_location=torch.device('cpu'))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
     # Scale the original PPG signal for further processing
     sig_scaled= preprocessing.scale(sig)
     
@@ -199,7 +300,7 @@ def reconstruction(
                     
                     # Set the reconstruction flag to True
                     reconstruction_flag = True
-                    
+                                        
                     # Perform the signal quality assessment to ensure that the reconstructed signal is not distorted
                     clean_indices, noisy_indices = sqa(sig=ppg_descaled, sampling_rate=sampling_rate)
     
@@ -232,11 +333,10 @@ if __name__ == "__main__":
     # Run PPG signal quality assessment.
     clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
     
-    execfile('GAN.py')
-    reconstruction_model_parameters = [G, device]
     
-    # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate, generator=G, device=device)
+    # Run PPG reconstruction    
+    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate)
+
     
     # Display results
     print("Analysis Results:")

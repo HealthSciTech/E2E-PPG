@@ -15,8 +15,7 @@ warnings.filterwarnings("ignore")
 def e2e_hrv_extraction(
         input_sig: np.ndarray,
         sampling_rate: int,
-        window_length_sec: int,
-        reconstruction_params: list) -> pd.DataFrame:
+        window_length_sec: int) -> pd.DataFrame:
     
     '''
     End-to-end HR and HRV extraction from an input PPG signal.
@@ -25,7 +24,6 @@ def e2e_hrv_extraction(
         input_sig (np.ndarray): The input PPG signal.
         sampling_rate (int): The sampling rate of the input signal.
         window_length_sec (int): The desired window length for HR and HRV extraction in seconds.
-        reconstruction_params (list): A list containing the GAN generator and device for signal reconstruction.
         
     Returns
         hrv_data (pd.Dataframe): A DataFrame containing HRV parameters.
@@ -46,8 +44,7 @@ def e2e_hrv_extraction(
     clean_indices, noisy_indices = sqa(sig=sig_filtered, sampling_rate=sampling_rate)
     
     # Run PPG reconstruction 
-    sig_reconstructed, clean_indices, noisy_indices = reconstruction(sig=sig_filtered, clean_indices=clean_indices, noisy_indices=noisy_indices, 
-                                                                  sampling_rate=sampling_rate, generator=reconstruction_params[0], device=reconstruction_params[1])
+    sig_reconstructed, clean_indices, noisy_indices = reconstruction(sig=sig_filtered, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate)
     
     # Calculate the window length for HR and HRV extraction in terms of samples
     window_length = window_length_sec*sampling_rate

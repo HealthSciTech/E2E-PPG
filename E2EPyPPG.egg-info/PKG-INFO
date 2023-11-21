@@ -1,31 +1,19 @@
-# -*- coding: utf-8 -*-
+Metadata-Version: 2.1
+Name: E2EPyPPG
+Version: 0.1.0
+Summary: End-to-End PPG Processing Pipeline
+Author: Mohammad Feli, Iman Azimi, Kianoosh Kazemi, Yuning Wang
+Author-email: mohammad.feli@utu.fi, azimii@uci.edu, kianoosh.k.kazem@utu.fi, yuning.y.wang@utu.fi
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
 
-
-from setuptools import setup, find_packages
-
-setup(
-    name='E2EPyPPG',
-    version='0.1.0',  # Update with the appropriate version number
-    description='End-to-End PPG Processing Pipeline',
-    author='Mohammad Feli, Iman Azimi, Kianoosh Kazemi, Yuning Wang',
-    author_email='mohammad.feli@utu.fi, azimii@uci.edu, kianoosh.k.kazem@utu.fi, yuning.y.wang@utu.fi',
-    packages=find_packages(),
-    install_requires=[
-        'heartpy==1.2.7',
-        'joblib==1.1.0',
-        'matplotlib==3.5.2',
-        'more_itertools==10.1.0',
-        'neurokit2==0.2.1',
-        'numpy==1.21.5',
-        'pandas==1.4.4',
-        'scikit-learn==1.0.2',
-        'scipy==1.9.1',
-        'tensorflow==2.10.1',
-        'torch==1.9.1',
-        'torchvision==0.10.1',
-        'wfdb==4.1.2',
-    ],
-    long_description='''\
     # E2E PPG Pipeline
 
     End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction. It is a comprehensive package designed for extracting accurate Heart Rate (HR) and Heart Rate Variability (HRV) data from Photoplethysmogram (PPG) signals.
@@ -66,15 +54,4 @@ setup(
     ## License
 
     This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-    ''',
-    long_description_content_type='text/markdown',
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-    ],
-)
+    

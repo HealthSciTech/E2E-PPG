@@ -111,11 +111,8 @@ if __name__ == "__main__":
     # Run PPG signal quality assessment.
     clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
     
-    execfile('GAN.py')
-    reconstruction_model_parameters = [G, device]
-    
     # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate, generator=G, device=device)
+    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate)
     
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90
@@ -137,7 +134,7 @@ if __name__ == "__main__":
         print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
         
         # Run PPG Peak detection
-        peaks, sampling_rate_new = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate, method='kazemi')
+        peaks, sampling_rate_new = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate)
         print("Number of detected peaks in each segment:")
         for pks in peaks:
             print(len(pks))

@@ -127,11 +127,8 @@ if __name__ == "__main__":
     # Run PPG signal quality assessment.
     clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
     
-    execfile('GAN.py')
-    reconstruction_model_parameters = [G, device]
-    
     # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate, generator=G, device=device)
+    ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate)
     
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90

@@ -1,0 +1,8 @@
+LICENSE.md
+README.md
+setup.py
+E2EPyPPG.egg-info/PKG-INFO
+E2EPyPPG.egg-info/SOURCES.txt
+E2EPyPPG.egg-info/dependency_links.txt
+E2EPyPPG.egg-info/requires.txt
+E2EPyPPG.egg-info/top_level.txt
