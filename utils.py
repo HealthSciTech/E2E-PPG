@@ -5,12 +5,13 @@ Miscellaneous functions
 
 '''
 
-import numpy as np
-import pandas as pd
 from typing import List, Tuple
 import os
+import numpy as np
+import pandas as pd
 from scipy.signal import resample, butter, filtfilt
 import neurokit2 as nk
+
 
 def get_data(
         file_name: str,
@@ -18,15 +19,15 @@ def get_data(
         usecols: List[str] = ['ppg'],
 ) -> np.ndarray:
     """
-    Import data
+    Import data (e.g., PPG signals)
     
-    Input parameters:
-        file_name: Name of the input file
-        local_directory: Data directory
-        usecols: The columns to read from the input file
+    Args:
+        file_name (str): Name of the input file
+        local_directory (str): Data directory
+        usecols (List[str]): The columns to read from the input file
     
-    Returns:
-        sig: the input signal (e.g., PPG)
+    Return:
+        sig (np.ndarray): the input signal (e.g., PPG)
     """
     try:
         # Construct the file path
@@ -49,130 +50,91 @@ def get_data(
     return None
 
 
-
 def normalize_data(sig: np.ndarray) -> np.ndarray:
     """
     Normalize the input signal between zero and one
     
-    Parameters:
-        sig: PPG signal.
+    Args:
+        sig (np.ndarray): PPG signal.
     
-    Returns:
-        Normalized signal
+    Return:
+        np.ndarray: Normalized signal
     """
     return (sig - np.min(sig)) / (np.max(sig) - np.min(sig))
 
 
-
-
-def check_and_resample(
+def resample_signal(
         sig: np.ndarray,
-        fs: int) -> Tuple[np.ndarray, int]:
+        fs_origin: int,
+        fs_target: int = 20,
+) -> np.ndarray:
     """
-    Check if the given signal has a sampling frequency (fs) of 20 Hz.
-    If not, resample the signal to 20 Hz.
+    Resample the signal
 
-    Parameters:
-    - sig: np.ndarray
-        The input signal.
-    - fs: int
-        The sampling frequency of the input signal.
+    Args:
+        sig (np.ndarray): The input signal.
+        fs_origin (int): The sampling frequency of the input signal.
+        fs_target (int): The sampling frequency of the output signal.
 
-    Returns:
-    - sig_resampled: np.ndarray
-        The resampled signal.
-    - fs_resampled: int
-        The updated sampling frequency.
+    Return:
+        sig_resampled (np.ndarray): The resampled signal.
     """
-
-    # Check if the sampling frequency is not 20 Hz
-    if fs != 20:
-        # Calculate the resampling rate
-        resampling_rate = 20/fs
-        # Resample the signal
-        sig_resampled = resample(sig, int(len(sig)*resampling_rate))
-        # Update the sampling frequency
-        fs_resampled = 20
-        return sig_resampled, fs_resampled
-
-    # If the sampling frequency is already 20 Hz, return the original signal
-    else:
-        return sig, fs
-
+    # Exit if the sampling frequency already is 20 Hz (return the original signal)
+    if fs_origin == fs_target:
+        return sig
+    # Calculate the resampling rate
+    resampling_rate = 20/fs_origin
+    # Resample the signal
+    sig_resampled = resample(sig, int(len(sig)*resampling_rate))
+    # Update the sampling frequency
+    return sig_resampled
 
 
 def bandpass_filter(
         sig: np.ndarray,
         fs: int,
         lowcut: float,
-        highcut: float) -> np.ndarray:
+        highcut: float,
+        order: int=2
+) -> np.ndarray:
     """
     Apply a bandpass filter to the input signal.
 
-    Parameters:
-    - sig: np.ndarray
-        The input signal.
-    - fs: int
-        The sampling frequency of the input signal.
-    - lowcut: float
-        The low cutoff frequency of the bandpass filter.
-    - highcut: float
-        The high cutoff frequency of the bandpass filter.
+    Args:
+        sig (np.ndarray): The input signal.
+        fs (int): The sampling frequency of the input signal.
+        lowcut (float): The low cutoff frequency of the bandpass filter.
+        highcut (float): The high cutoff frequency of the bandpass filter.
 
-    Returns:
-    - sig_filtered: np.ndarray
-        The filtered signal using a Butterworth bandpass filter.
+    Return:
+        sig_filtered (np.ndarray): The filtered signal using a Butterworth bandpass filter.
     """
-
-    def butter_bandpass_filter(data, fs, lowcut, highcut, order=2):
-        """
-        Butterworth bandpass filter implementation.
-
-        Parameters:
-        - data: np.ndarray
-            The input signal.
-        - fs: int
-            The sampling frequency of the input signal.
-        - lowcut: float
-            The low cutoff frequency of the bandpass filter.
-        - highcut: float
-            The high cutoff frequency of the bandpass filter.
-        - order: int, optional
-            The filter order (default is 2).
-
-        Returns:
-        - filtered_data: np.ndarray
-            The filtered signal.
-        """
-        nyquist = 0.5 * fs
-        low = lowcut / nyquist
-        high = highcut / nyquist
-        b, a = butter(order, [low, high], btype='band')
-        y = filtfilt(b, a, data)
-        return y
-
-    # Apply bandpass filter to the input signal
-    sig_filtered = butter_bandpass_filter(sig, fs, lowcut, highcut)
-
+    nyquist = 0.5 * fs
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(order, [low, high], btype='band')
+    sig_filtered = filtfilt(b, a, sig)
     return sig_filtered
 
 
-        
 def find_peaks(
         ppg: np.ndarray,
         sampling_rate: int,
-        return_sig: bool = False):
+        return_sig: bool = False
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Find peaks in PPG.
 
-    Parameters:
-    - ppg (np.ndarray): The input PPG signal.
-    - sampling_rate (int): The sampling rate of the signal.
-    - return_sig (bool, optional): If True, return the cleaned PPG signal along with the peak indices (default is False).
+    Args:
+        ppg (np.ndarray): The input PPG signal.
+        sampling_rate (int): The sampling rate of the signal.
+        return_sig (bool): If True, return the cleaned PPG
+            signal along with the peak indices (default is False).
 
-    Returns:
-    - np.ndarray: An array containing the indices of the detected peaks in the PPG signal.
-    - Optional: If return_sig is True, also returns the cleaned PPG signal.
+    Return:
+        peaks (np.ndarray): An array containing the indices of
+            the detected peaks in the PPG signal.
+        ppg_cleaned (np.ndarray): The cleaned PPG signal, return if return_sig is True.
 
     """
 
@@ -185,8 +147,6 @@ def find_peaks(
 
     # Return either just the peaks or both the cleaned signal and peaks
     if return_sig:
-        return ppg_cleaned, peaks
+        return peaks, ppg_cleaned
     else:
-        return peaks
-        
-        
+        return peaks, None

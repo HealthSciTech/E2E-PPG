@@ -9,7 +9,7 @@ from kazemi_peak_detection import ppg_peaks
 from ppg_sqa import sqa
 from ppg_reconstruction import reconstruction
 from ppg_clean_extraction import clean_seg_extraction
-from utils import normalize_data, get_data, bandpass_filter, check_and_resample
+from utils import normalize_data, get_data, bandpass_filter
 from typing import Tuple
 import warnings
 warnings.filterwarnings("ignore")
@@ -95,34 +95,32 @@ def peak_detection(
 if __name__ == "__main__":
     # Import a sample data
     FILE_NAME = "201902020222_Data.csv"
-    SAMPLING_FREQUENCY = 20
+    sampling_rate = 20
     input_sig = get_data(file_name=FILE_NAME)
-    
-    # Check if resampling is needed and perform resampling if necessary
-    input_sig, sampling_rate = check_and_resample(sig=input_sig, fs=SAMPLING_FREQUENCY)
-    
-    # Bandpass filter parameters
-    lowcut = 0.5  # Lower cutoff frequency in Hz
-    highcut = 3  # Upper cutoff frequency in Hz
-    
-    # Apply bandpass filter
-    filtered_sig = bandpass_filter(sig=input_sig, fs=sampling_rate, lowcut=lowcut, highcut=highcut)
+
+    # Apply bandpass filter if needed
+    filtered_sig = bandpass_filter(
+        sig=input_sig, fs=sampling_rate, lowcut=0.5, highcut=3)
 
     # Run PPG signal quality assessment.
     clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
-    
+
     # Run PPG reconstruction
     ppg_signal, clean_indices, noisy_indices = reconstruction(sig=filtered_sig, clean_indices=clean_indices, noisy_indices=noisy_indices, sampling_rate=sampling_rate)
-    
+
     # Define a window length for clean segments extraction (in seconds)
     WINDOW_LENGTH_SEC = 90
-    
+
     # Calculate the window length in terms of samples
     window_length = WINDOW_LENGTH_SEC*sampling_rate
-    
-    # Scan clean parts of the signal and extract clean segments with the specified window length
-    clean_segments = clean_seg_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
-    
+
+    # Scan clean parts of the signal and extract clean segments
+    #   with the specified window length
+    clean_segments = clean_seg_extraction(
+        sig=ppg_signal,
+        noisy_indices=noisy_indices,
+        window_length=window_length)
+
     # Display results
     print("Analysis Results:")
     print("------------------")
@@ -132,10 +130,10 @@ if __name__ == "__main__":
     else:
         # Print the number of detected clean segments
         print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
-        
+
         # Run PPG Peak detection
-        peaks, sampling_rate_new = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate)
+        peaks, sampling_rate_new = peak_detection(
+            clean_segments=clean_segments, sampling_rate=sampling_rate)
         print("Number of detected peaks in each segment:")
         for pks in peaks:
             print(len(pks))
-    

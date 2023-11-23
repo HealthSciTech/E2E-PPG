@@ -3,17 +3,20 @@
 import pickle
 import os
 from typing import Tuple, List
-import numpy as np
 from scipy import stats, signal
 import more_itertools as mit
 import joblib
-from utils import normalize_data, get_data, bandpass_filter, find_peaks, check_and_resample
+from utils import normalize_data, get_data, bandpass_filter, find_peaks, resample_signal
 import warnings
+import numpy as np
+
+
 warnings.filterwarnings("ignore")
 
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
 SQA_MODEL_FILE_NAME = 'OneClassSVM_model.sav'
+MODEL_SAMPLING_FREQUENCY = 20
 SEGMENT_SIZE = 30
 SHIFTING_SIZE = 2
 
@@ -84,13 +87,14 @@ def heart_cycle_detection(
     """
     # Normalization
     ppg_normalized = normalize_data(ppg)
-    
+
     # Upsampling signal by 2
     sampling_rate = sampling_rate*2
     ppg_upsampled = signal.resample(ppg_normalized, len(ppg_normalized)*2)
-    
+
     # Systolic peak detection
-    ppg_cleaned, peaks = find_peaks(ppg=ppg_upsampled, sampling_rate=sampling_rate, return_sig=True)
+    peaks, ppg_cleaned = find_peaks(
+        ppg=ppg_upsampled, sampling_rate=sampling_rate, return_sig=True)
 
     # Heart cycle detection based on the peaks and fixed intervals
     hc = []
@@ -194,10 +198,10 @@ def feature_extraction(
     return features
 
 
-
 def sqa(
         sig: np.ndarray,
         sampling_rate: int,
+        filter_signal: bool = True,
 ) -> Tuple[list, list]:
     """
     Perform PPG Signal Quality Assessment (SQA).
@@ -205,6 +209,8 @@ def sqa(
     Input parameters:
         sig (np.ndarray): PPG signal.
         sampling_rate (int): Sampling rate of the PPG signal.
+        filter_signal (bool): True if the signal has not filtered using
+            a bandpass filter.
     
     Returns:
         clean_indices: A list of clean indices.
@@ -223,6 +229,17 @@ def sqa(
     scaler = joblib.load(os.path.join(MODEL_PATH, SCALER_FILE_NAME))
     model = pickle.load(
         open(os.path.join(MODEL_PATH, SQA_MODEL_FILE_NAME), 'rb'))
+
+    # Check if resampling is needed and perform resampling if necessary
+    if sampling_rate != MODEL_SAMPLING_FREQUENCY:
+        sig = resample_signal(
+            sig=sig, fs_origin=sampling_rate, fs_target=MODEL_SAMPLING_FREQUENCY)
+        sampling_rate = MODEL_SAMPLING_FREQUENCY
+
+    # Apply bandpass filter if needed
+    if filter_signal:
+        sig = bandpass_filter(
+            sig=sig, fs=sampling_rate, lowcut=0.5, highcut=3)
 
     # Generate indices for the PPG signal
     sig_indices = np.arange(len(sig))
@@ -266,7 +283,7 @@ def sqa(
 
     # Generate flatten lists of reliable indices as clean indices
     clean_indices = list(set([item for segment in reliable_indices_all for item in segment]))
-    
+
     # The indices that dont exist in the flat list of clean indices indicate unreliable indices
     unreliable_indices = [item for item in sig_indices if item not in clean_indices]
 
@@ -274,38 +291,28 @@ def sqa(
     noisy_indices = []
     for group in mit.consecutive_groups(unreliable_indices):
         noisy_indices.append(list(group))
-    noisy_indices = [noisy_indices[i] for i in range(len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
-    
+    noisy_indices = [noisy_indices[i] for i in range(
+        len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
+
     return clean_indices, noisy_indices
 
 
 if __name__ == "__main__":
     # Import a sample data
-    FILE_NAME = "201902020222_Data.csv"
-    SAMPLING_FREQUENCY = 20
-    input_sig = get_data(file_name=FILE_NAME)
-    
-    # Check if resampling is needed and perform resampling if necessary
-    input_sig, sampling_rate = check_and_resample(sig=input_sig, fs=SAMPLING_FREQUENCY)
-    
-    # Bandpass filter parameters
-    lowcut = 0.5  # Lower cutoff frequency in Hz
-    highcut = 3  # Upper cutoff frequency in Hz
-    
-    # Apply bandpass filter
-    filtered_sig = bandpass_filter(sig=input_sig, fs=sampling_rate, lowcut=lowcut, highcut=highcut)
+    file_name = "201902020222_Data.csv"
+    input_sig = get_data(file_name=file_name)
+    input_sampling_rate = 20
 
     # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = sqa(sig=filtered_sig, sampling_rate=sampling_rate)
-
+    clean_ind, noisy_ind = sqa(sig=input_sig, sampling_rate=input_sampling_rate)
 
     # Display results
     print("Analysis Results:")
     print("------------------")
-    print(f"Length of the clean signal (in seconds): {len(clean_indices)/SAMPLING_FREQUENCY:.2f}")
-    print(f"Number of noisy parts in the signal: {len(noisy_indices)}")
-    
-    if len(noisy_indices) > 0:
+    print(f"Length of the clean signal (in seconds): {len(clean_ind)/MODEL_SAMPLING_FREQUENCY:.2f}")
+    print(f"Number of noisy parts in the signal: {len(noisy_ind)}")
+
+    if len(noisy_ind) > 0:
         print("Length of each noise in the signal (in seconds):")
-        for noise in noisy_indices:
-            print(f"   - {len(noise)/SAMPLING_FREQUENCY:.2f}")
+        for noise in noisy_ind:
+            print(f"   - {len(noise)/MODEL_SAMPLING_FREQUENCY:.2f}")
