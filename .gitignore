@@ -2,7 +2,7 @@ dist/
 build/
 E2EPyPPG.egg-info/
 venv/
-__pycache__
-venv
+__pycache__/
+venv/
 .venv
 setup.py
