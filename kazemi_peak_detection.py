@@ -4,19 +4,20 @@ import numpy as np
 from tensorflow import keras
 from scipy.signal import resample
 import os
-
+from utils import resample_signal
 
 MODEL_PATH = "models"
 PEAK_DETECTION_MODEL_DIR = "kazemi_peak_detection_model"
+MODEL_SAMPLING_FREQUENCY = 100
 
 def normalize(arr):
     """
     Normalize an array between (-1, 1).
     
-    Parameters:
+    Args:
         arr (numpy.ndarray): An array of the signal
 
-    Returns:
+    Return:
         numpy.ndarray: Normalized array between (-1, 1)
     """
     return 1 * ((arr - arr.min()) / (arr.max() - arr.min()))
@@ -26,15 +27,15 @@ def split_signal(sig, rate, seconds, overlap, minlen):
     """
     Split a signal into segments.
     
-    Parameters:
+    Args:
         sig (numpy.ndarray): Signal to be split
         rate (int): Sampling frequency of the signal
         seconds (int): Signal length in seconds
         overlap (int): Overlap in seconds
         minlen (int): Minimum length of the signal in seconds
 
-    Returns:
-        numpy.ndarray: Segmentized signal
+    Return:
+        sig_splits (numpy.ndarray): Segmentized signal
     """
     sig_splits = []
     for i in range(0, len(sig), int((seconds - overlap) * rate)):
@@ -55,11 +56,11 @@ def model_prediction(signal):
     """
     Load a pre-trained model and make prediction.
     
-    Parameters:
+    Args:
         signal (numpy.ndarray): Signal for making predictions
 
-    Returns:
-        numpy.ndarray: Model predictions
+    Return:
+        prediction (numpy.ndarray): Model predictions
     """
     reconstructed_model = keras.models.load_model(os.path.join(MODEL_PATH, PEAK_DETECTION_MODEL_DIR))
     prediction = reconstructed_model.predict(signal)
@@ -67,12 +68,12 @@ def model_prediction(signal):
 
 def Wrapper_function(prediction, raw_signal):
     """
-    Parameters:
+    Args:
         prediction (numpy.ndarray): Model predictions
         raw_signal (numpy.ndarray): Original raw signal
 
-    Returns:
-        numpy.ndarray: Final indices of identified peaks
+    Return:
+        final_indeces (numpy.ndarray): Final indices of identified peaks
     """
     ## Normalizing the signal for post processing
     test = normalize(prediction)
@@ -139,22 +140,31 @@ def ppg_peaks(signal, sampling_freq, seconds, overlap, minlen):
     """
     Main function to detect peaks in PPG signals using the trained model.
     
-    Parameters:
+    Args:
         signal (numpy.ndarray): PPG signal
         sampling_freq (int): Sampling frequency of the signal
         seconds (int): Signal length in seconds
         overlap (int): Overlap in seconds
         minlen (int): Minimum length of the signal in seconds
 
-    Returns:
-        tuple: Tuple containing peak indexes and sampling frequency
+    Return:
+        peak_indexes (list): A list containing peak indexes 
+        
+    Reference:
+        Kazemi, K., Laitala, J., Azimi, I., Liljeberg, P., & Rahmani, A. M. (2022). 
+        Robust ppg peak detection using dilated convolutional neural networks. Sensors, 22(16), 6054.
     """
     # Upsample the signal if the sampling frequency is not 100 Hz
-    if sampling_freq != 100:
-        resampling_rate = 100 / sampling_freq
-        signal = resample(signal, int(len(signal) * resampling_rate))
-        sampling_freq = 100
-
+    
+    resampling_flag = False
+    # Check if resampling is needed and perform resampling if necessary
+    if sampling_freq != MODEL_SAMPLING_FREQUENCY:
+        signal = resample_signal(
+            sig=signal, fs_origin=sampling_freq, fs_target=MODEL_SAMPLING_FREQUENCY)
+        resampling_flag = True
+        resampling_rate = sampling_freq/MODEL_SAMPLING_FREQUENCY
+        sampling_freq = MODEL_SAMPLING_FREQUENCY
+    
     # Split the signal into segments
     segmentized_signal = split_signal(signal, sampling_freq, seconds, overlap, minlen)
 
@@ -170,5 +180,9 @@ def ppg_peaks(signal, sampling_freq, seconds, overlap, minlen):
         indices.append(peak_index)
 
     peak_indexes = [item for sublist in indices for item in sublist]
-
-    return peak_indexes, sampling_freq
+    
+    # If resampling performed, update indices according to the original sampling rate
+    if resampling_flag:
+        peak_indexes = [int(peak * resampling_rate) for peak in peak_indexes]
+    
+    return peak_indexes

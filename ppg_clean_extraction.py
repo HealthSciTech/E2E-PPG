@@ -3,7 +3,7 @@
 import warnings
 import pandas as pd
 import numpy as np
-from utils import get_data, bandpass_filter
+from utils import get_data
 from ppg_sqa import sqa
 from ppg_reconstruction import reconstruction
 warnings.filterwarnings("ignore")
@@ -17,12 +17,12 @@ def clean_seg_extraction(
     """
     Scan the clean parts of the signal and extract clean segments based on the input window length.
     
-    Input parameters:
+    Args:
         sig (numpy.ndarray): Input PPG signal.
         noisy_indices (list): List of noisy segment indices.
         window_length (int): Desired window length for clean segment extraction in terms of samples.
         
-    Returns:
+    Return:
         clean_segments (list): List of clean PPG segments with the specified window length and their starting index.
     """
     
@@ -30,10 +30,10 @@ def clean_seg_extraction(
         '''
         Scan the quality vector and find the start and end indices of clean parts.
 
-        Input parameters:
+        Args:
             quality_lst (list): Quality vector of the signal (0 indictes clean and 1 indicates noisy)
                 
-        Returns
+        Return:
             start_end_clean (list): Start and end indices of the clean parts in a list of tuples
         '''
         
@@ -99,45 +99,41 @@ def clean_seg_extraction(
 
 if __name__ == "__main__":
     # Import a sample data
-    FILE_NAME = "201902020222_Data.csv"
-    sampling_rate = 20
-    input_sig = get_data(file_name=FILE_NAME)
-
-    # Apply bandpass filter if needed
-    filtered_sig = bandpass_filter(
-        sig=input_sig, fs=sampling_rate, lowcut=0.5, highcut=3)
-
-    # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = sqa(
-        sig=filtered_sig, sampling_rate=sampling_rate, filter_signal=False)
-
-    # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = reconstruction(
-        sig=filtered_sig,
-        clean_indices=clean_indices,
-        noisy_indices=noisy_indices,
-        sampling_rate=sampling_rate,
-        filter_signal=False)
+    file_name = "201902020222_Data.csv"
+    input_sampling_rate = 20
+    input_sig = get_data(file_name=file_name)
 
     # Define a window length for clean segments extraction (in seconds)
-    WINDOW_LENGTH_SEC = 90
+    window_length_sec = 90
+
+    # Run PPG signal quality assessment.
+    clean_ind, noisy_ind = sqa(sig=input_sig, sampling_rate=input_sampling_rate)
+
+
+    # Run PPG reconstruction
+    reconstructed_signal, clean_ind, noisy_ind = reconstruction(
+        sig=input_sig,
+        clean_indices=clean_ind,
+        noisy_indices=noisy_ind,
+        sampling_rate=input_sampling_rate)
+
 
     # Calculate the window length in terms of samples
-    window_length = WINDOW_LENGTH_SEC*sampling_rate
+    window_length = window_length_sec*input_sampling_rate
     
     # Scan clean parts of the signal and extract clean segments with the specified window length
-    clean_segments = clean_seg_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
+    clean_segments = clean_seg_extraction(sig=reconstructed_signal, noisy_indices=noisy_ind, window_length=window_length)
     
     # Display results
     print("Analysis Results:")
     print("------------------")
     # Check if clean segments are found, if not, print a message
     if len(clean_segments) == 0:
-        print('No clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segment was detected in the signal!')
+        print('No clean ' + str(window_length_sec) + ' seconds segment was detected in the signal!')
     else:
         # Print the number of detected clean segments
-        print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
+        print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
         print("Starting index of each segment in seconds:")
         for seg in clean_segments:
-            print(int(seg[0] / sampling_rate))
+            print(int(seg[0] / input_sampling_rate))
     

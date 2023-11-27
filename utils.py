@@ -83,7 +83,7 @@ def resample_signal(
     if fs_origin == fs_target:
         return sig
     # Calculate the resampling rate
-    resampling_rate = 20/fs_origin
+    resampling_rate = fs_target/fs_origin
     # Resample the signal
     sig_resampled = resample(sig, int(len(sig)*resampling_rate))
     # Update the sampling frequency

@@ -32,7 +32,7 @@ def segmentation(
     """
     Segments the signals (PPG) and their indices into fixed-size segments.
     
-    Input parameters:
+    Args:
         sig: Input signal (e.g., PPG).
         sig_indices: Corresponding indices for the input signal.
         sampling_rate: Sampling rate of the PPG signal.
@@ -43,7 +43,7 @@ def segmentation(
         shift_size: Size of the shift (in seconds) in segmentation
             in case method is 'shifting'.
     
-    Returns:
+    Return:
         segments_sig: List of segments (PPG).
         segments_indices: List of segments (indices).
     """
@@ -78,11 +78,11 @@ def heart_cycle_detection(
     """
     Extract heart cycles from the PPG signal
     
-    Input parameters:
+    Args:
         ppg: Input PPG signal.
         sampling_rate: Sampling rate of the PPG signal.
     
-    Returns:
+    Return:
         hc: List of heart cycles
     """
     # Normalization
@@ -118,10 +118,10 @@ def energy_hc(hc: list) -> float:
     """
     Extract energy of heart cycle
     
-    Input parameters:
+    Args:
         hc: List of heart cycles
     
-    Returns:
+    Return:
         var_energy: Variation of heart cycles energy
     """
     energy = []
@@ -139,10 +139,10 @@ def template_matching_features(hc: list) -> Tuple[float, float]:
     """
     Extract template matching features from heart cycles
     
-    Input parameters:
+    Args:
         hc: List of heart cycles
     
-    Returns:
+    Return:
         tm_ave_eu: Average of Euclidean distance with the template
         tm_ave_corr: Average of correlation with the template
     """
@@ -168,11 +168,11 @@ def feature_extraction(
     """
     Extract features from PPG signal
     
-    Input parameters:
+    Args:
         ppg: Input PPG signal.
         sampling_rate: Sampling rate of the PPG signal.
     
-    Returns:
+    Return:
         features: List of features
     """
     # feature 1: Interquartile range
@@ -206,22 +206,27 @@ def sqa(
     """
     Perform PPG Signal Quality Assessment (SQA).
     
-    Input parameters:
-        sig (np.ndarray): PPG signal.
-        sampling_rate (int): Sampling rate of the PPG signal.
-        filter_signal (bool): True if the signal has not filtered using
-            a bandpass filter.
-    
-    Returns:
-        clean_indices: A list of clean indices.
-        noisy_indices: A list of noisy indices.
-        
-        
     This function assesses the quality of a PPG signal by classifying its segments
     as reliable (clean) or unrelaible (noisy) using a pre-trained model.
 
     The clean indices represent parts of the PPG signal that are deemed reliable,
     while the noisy indices indicate parts that may be affected by noise or artifacts.
+    
+    Args:
+        sig (np.ndarray): PPG signal.
+        sampling_rate (int): Sampling rate of the PPG signal.
+        filter_signal (bool): True if the signal has not filtered using
+            a bandpass filter.
+    
+    Return:
+        clean_indices: A list of clean indices.
+        noisy_indices: A list of noisy indices.
+        
+    
+    Reference:
+        Feli, M., Azimi, I., Anzanpour, A., Rahmani, A. M., & Liljeberg, P. (2023).
+        An energy-efficient semi-supervised approach for on-device photoplethysmogram signal quality assessment. 
+        Smart Health, 28, 100390.
 
 
     """
@@ -229,11 +234,14 @@ def sqa(
     scaler = joblib.load(os.path.join(MODEL_PATH, SCALER_FILE_NAME))
     model = pickle.load(
         open(os.path.join(MODEL_PATH, SQA_MODEL_FILE_NAME), 'rb'))
-
+    
+    resampling_flag = False
     # Check if resampling is needed and perform resampling if necessary
     if sampling_rate != MODEL_SAMPLING_FREQUENCY:
         sig = resample_signal(
             sig=sig, fs_origin=sampling_rate, fs_target=MODEL_SAMPLING_FREQUENCY)
+        resampling_flag = True
+        resampling_rate = sampling_rate/MODEL_SAMPLING_FREQUENCY
         sampling_rate = MODEL_SAMPLING_FREQUENCY
 
     # Apply bandpass filter if needed
@@ -293,6 +301,12 @@ def sqa(
         noisy_indices.append(list(group))
     noisy_indices = [noisy_indices[i] for i in range(
         len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
+    
+    # If resampling performed, update indices according to the original sampling rate
+    if resampling_flag:
+        clean_indices = [int(index * resampling_rate) for index in clean_indices]
+        noisy_indices = [[int(index * resampling_rate) for index in noise] for noise in noisy_indices]
+
 
     return clean_indices, noisy_indices
 
@@ -309,10 +323,13 @@ if __name__ == "__main__":
     # Display results
     print("Analysis Results:")
     print("------------------")
-    print(f"Length of the clean signal (in seconds): {len(clean_ind)/MODEL_SAMPLING_FREQUENCY:.2f}")
+    print(f"Length of the clean signal (in seconds): {len(clean_ind)/input_sampling_rate:.2f}")
     print(f"Number of noisy parts in the signal: {len(noisy_ind)}")
 
     if len(noisy_ind) > 0:
         print("Length of each noise in the signal (in seconds):")
         for noise in noisy_ind:
-            print(f"   - {len(noise)/MODEL_SAMPLING_FREQUENCY:.2f}")
+            print(f"   - {len(noise)/input_sampling_rate:.2f}")
+    else:
+        print("The input signal is completely clean!")
+

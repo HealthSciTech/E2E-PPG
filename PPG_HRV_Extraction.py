@@ -19,13 +19,13 @@ def hrv_parameters(
     """
     Calculate HR and HRV parameters from a list of peak indices.
 
-    Input parameters:
+    Args:
         peaks (np.ndarray): Peak indices for a segment.
         seg_start_idx (int): Starting index of a segemnt.
         sampling_rate (int): Sampling rate of the signal.
         window_length (int): Desired window length for HR and HRV extraction in terms of samples.
 
-    Returns:
+    Return:
         HRV_indices (pandas.DataFrame): DataFrame containing HRV parameters.
     """
     
@@ -74,13 +74,13 @@ def hrv_extraction(
     """
     Calculate HR and HRV parameters from clean segments peak indices.
 
-    Input parameters:
+    Args:
         clean_segments (list): List of clean PPG segments and their starting index.
         peaks (list): List of lists, each containing the detected peaks for a corresponding clean segment.
         sampling_rate (int): Sampling rate of the PPG signal.
         window_length (int): Desired window length for HR and HRV extraction in terms of samples.
 
-    Returns:
+    Return:
     - hrv_data (pandas.DataFrame): DataFrame containing HRV parameters for all clean segments.
     """
     
@@ -107,53 +107,52 @@ def hrv_extraction(
 
 if __name__ == "__main__":
     # Import a sample data
-    FILE_NAME = "201902020222_Data.csv"
-    sampling_rate = 20
-    input_sig = get_data(file_name=FILE_NAME)
-
-    # Apply bandpass filter if needed
-    filtered_sig = bandpass_filter(
-        sig=input_sig, fs=sampling_rate, lowcut=0.5, highcut=3)
-
-    # Run PPG signal quality assessment.
-    clean_indices, noisy_indices = sqa(
-        sig=filtered_sig, sampling_rate=sampling_rate, filter_signal=False)
-
-    # Run PPG reconstruction
-    ppg_signal, clean_indices, noisy_indices = reconstruction(
-        sig=filtered_sig,
-        clean_indices=clean_indices,
-        noisy_indices=noisy_indices,
-        sampling_rate=sampling_rate,
-        filter_signal=False)
+    file_name = "201902020222_Data.csv"
+    input_sampling_rate = 20
+    input_sig = get_data(file_name=file_name)
 
     # Define a window length for clean segments extraction (in seconds)
-    WINDOW_LENGTH_SEC = 90
+    window_length_sec = 90
+    
+    # Run PPG signal quality assessment.
+    clean_ind, noisy_ind = sqa(sig=input_sig, sampling_rate=input_sampling_rate)
+    
+    # Run PPG reconstruction
+    reconstructed_signal, clean_ind, noisy_ind = reconstruction(
+        sig=input_sig,
+        clean_indices=clean_ind,
+        noisy_indices=noisy_ind,
+        sampling_rate=input_sampling_rate)
+
 
     # Calculate the window length in terms of samples
-    window_length = WINDOW_LENGTH_SEC*sampling_rate
-
+    window_length = window_length_sec*input_sampling_rate
+    
     # Scan clean parts of the signal and extract clean segments with the specified window length
-    clean_segments = clean_seg_extraction(sig=ppg_signal, noisy_indices=noisy_indices, window_length=window_length)
+    clean_segments = clean_seg_extraction(sig=reconstructed_signal, noisy_indices=noisy_ind, window_length=window_length)
 
     # Display results
     print("Analysis Results:")
     print("------------------")
     # Check if clean segments are found, if not, print a message
     if len(clean_segments) == 0:
-        print('No clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segment was detected in the signal!')
+        print('No clean ' + str(window_length_sec) + ' seconds segment was detected in the signal!')
     else:
         # Print the number of detected clean segments
-        print(str(len(clean_segments)) + ' clean ' + str(WINDOW_LENGTH_SEC) + ' seconds segments was detected in the signal!' )
+        print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
 
         # Run PPG Peak detection
-        peaks, sampling_rate_new = peak_detection(clean_segments, sampling_rate)
+        peaks = peak_detection(
+            clean_segments=clean_segments, sampling_rate=input_sampling_rate)
 
-        # Update window length based on the new sampling rate
-        window_length_new = WINDOW_LENGTH_SEC*sampling_rate_new
 
         # Perform HR and HRV extraction
-        hrv_data = hrv_extraction(clean_segments=clean_segments, peaks=peaks, sampling_rate=sampling_rate_new, window_length=window_length_new)
+        hrv_data = hrv_extraction(
+            clean_segments=clean_segments,
+            peaks=peaks,
+            sampling_rate=input_sampling_rate,
+            window_length=window_length)
+        
         print("HR and HRV parameters:")
         print(hrv_data)
 

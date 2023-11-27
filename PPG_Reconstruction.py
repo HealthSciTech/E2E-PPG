@@ -11,7 +11,7 @@ import torch
 from torch import nn
 import __main__
 from utils import find_peaks, resample_signal, get_data, bandpass_filter
-from ppg_sqa import sqa, MODEL_SAMPLING_FREQUENCY
+from ppg_sqa import sqa
 
 warnings.filterwarnings("ignore")
 
@@ -20,6 +20,8 @@ warnings.filterwarnings("ignore")
 MAX_RECONSTRUCTION_LENGTH_SEC = 15
 
 UPSAMPLING_RATE = 2
+
+MODEL_SAMPLING_FREQUENCY = 20
 
 MODEL_PATH = "models"
 GAN_MODEL_FILE_NAME = 'GAN_model.pth'
@@ -120,19 +122,20 @@ def gan_rec(
     '''
     Reconstruct noise in the PPG signal using a Generative Adversarial Network (GAN) generator.
     
-    Input parameters:
+    This function iteratively reconstructs noise in the PPG signal using a GAN generator.
+    The clean signal and reconstructed noise are concatenated, and the process is repeated
+    until the entire noise sequence is reconstructed.
+    
+    Args:
         ppg_clean (np.ndarray): Preceding clean signal to be used for noise reconstruction.
         noise (list): List of noise indices.
         sampling_rate (int): Sampling rate of the PPG signal.
         generator: GAN generator for noise reconstruction.
         device: Device on which to run the generator.
         
-    Returns:
+    Return:
         reconstructed_noise: The reconstructed noise.
 
-    This function iteratively reconstructs noise in the PPG signal using a GAN generator.
-    The clean signal and reconstructed noise are concatenated, and the process is repeated
-    until the entire noise sequence is reconstructed.
     '''
 
     # Parameters for reconstruction
@@ -211,6 +214,12 @@ def reconstruction(
             applied; otherwise, returns the original indices of clean parts).
         noisy_indices (list): Updated indices of noisy parts (if reconstruction is
             applied; otherwise, returns the original indices of noisy parts).
+    
+    Reference:
+        Wang, Y., Azimi, I., Kazemi, K., Rahmani, A. M., & Liljeberg, P. (2022, July). 
+        Ppg signal reconstruction using deep convolutional generative adversarial network. 
+        In 2022 44th Annual International Conference of the IEEE Engineering in Medicine & Biology Society (EMBC) (pp. 3387-3391). IEEE.
+
     '''
 
     # Set the Generator class in the main module for compatibility with the saved GAN model
@@ -222,10 +231,14 @@ def reconstruction(
     device = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu")
 
+    resampling_flag = False
     # Check if resampling is needed and perform resampling if necessary
     if sampling_rate != MODEL_SAMPLING_FREQUENCY:
         sig = resample_signal(
             sig=sig, fs_origin=sampling_rate, fs_target=MODEL_SAMPLING_FREQUENCY)
+        resampling_flag = True
+        resampling_rate = sampling_rate/MODEL_SAMPLING_FREQUENCY
+        sampling_rate_original = sampling_rate
         sampling_rate = MODEL_SAMPLING_FREQUENCY
 
     # Apply bandpass filter if needed
@@ -353,7 +366,14 @@ def reconstruction(
         ppg_signal = ppg_descaled
     else:
         ppg_signal = sig
- 
+        
+    # If resampling performed, update the reconstructed signal and indices according to the original sampling rate
+    if resampling_flag:
+        clean_indices = [int(index * resampling_rate) for index in clean_indices]
+        noisy_indices = [[int(index * resampling_rate) for index in noise] for noise in noisy_indices]
+        ppg_signal = resample_signal(
+            sig=ppg_signal, fs_origin=sampling_rate, fs_target=sampling_rate_original)
+        
     # Return the reconstructed or original PPG signal, along with updated indices
     return ppg_signal, clean_indices, noisy_indices
 
@@ -377,10 +397,12 @@ if __name__ == "__main__":
     # Display results
     print("Analysis Results:")
     print("------------------")
-    print(f"Length of the clean signal after reconstruction (in seconds): {len(clean_ind)/MODEL_SAMPLING_FREQUENCY:.2f}")
+    print(f"Length of the clean signal after reconstruction (in seconds): {len(clean_ind)/input_sampling_rate:.2f}")
     print(f"Number of noisy parts in the signal after reconstruction: {len(noisy_ind)}")
 
     if len(noisy_ind) > 0:
         print("Length of each noise in the signal after reconstruction (in seconds):")
         for noise in noisy_ind:
-            print(f"   - {len(noise)/MODEL_SAMPLING_FREQUENCY:.2f}")
+            print(f"   - {len(noise)/input_sampling_rate:.2f}")
+    else:
+        print("The input signal is completely clean!")

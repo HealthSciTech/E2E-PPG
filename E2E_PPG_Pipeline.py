@@ -20,12 +20,12 @@ def e2e_hrv_extraction(
     '''
     End-to-end HR and HRV extraction from an input PPG signal.
     
-    Input parameters
+    Args:
         input_sig (np.ndarray): The input PPG signal.
         sampling_rate (int): The sampling rate of the input signal.
         window_length_sec (int): The desired window length for HR and HRV extraction in seconds.
         
-    Returns
+    Return:
         hrv_data (pd.Dataframe): A DataFrame containing HRV parameters.
 
     '''
@@ -65,17 +65,14 @@ def e2e_hrv_extraction(
         print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
 
         # Run PPG peak detection
-        peaks, sampling_rate_new = peak_detection(clean_segments, sampling_rate)
-
-        # Update window length based on the new sampling rate
-        window_length_new = window_length_sec*sampling_rate_new
+        peaks = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate)
 
         # Perform HR and HRV extraction
         hrv_data = hrv_extraction(
             clean_segments=clean_segments,
             peaks=peaks,
-            sampling_rate=sampling_rate_new,
-            window_length=window_length_new)
+            sampling_rate=sampling_rate,
+            window_length=window_length)
         print("HR and HRV parameters:")
         print(hrv_data)
         print('Done!')
