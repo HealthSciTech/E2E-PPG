@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from utils import get_data, bandpass_filter
+from utils import get_data
 from ppg_sqa import sqa
 from ppg_reconstruction import reconstruction
 from ppg_clean_extraction import clean_seg_extraction
@@ -27,6 +27,10 @@ def hrv_parameters(
 
     Return:
         HRV_indices (pandas.DataFrame): DataFrame containing HRV parameters.
+        
+    Reference:
+        Makowski, D., Pham, T., Lau, Z. J., Brammer, J. C., Lespinasse, F., Pham, H., ... & Chen, S. A. (2021).
+        NeuroKit2: A Python toolbox for neurophysiological signal processing. Behavior research methods, 1-8.
     """
     
     # Calculate window length in minutes

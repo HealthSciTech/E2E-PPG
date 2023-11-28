@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 def e2e_hrv_extraction(
         input_sig: np.ndarray,
         sampling_rate: int,
-        window_length_sec: int
+        window_length_sec: int = 60
 ) -> pd.DataFrame:
     '''
     End-to-end HR and HRV extraction from an input PPG signal.

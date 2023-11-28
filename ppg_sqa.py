@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 MODEL_PATH = "models"
 SCALER_FILE_NAME = "Train_data_scaler.save"
 SQA_MODEL_FILE_NAME = 'OneClassSVM_model.sav'
-MODEL_SAMPLING_FREQUENCY = 20
+SQA_MODEL_SAMPLING_FREQUENCY = 20
 SEGMENT_SIZE = 30
 SHIFTING_SIZE = 2
 
@@ -237,12 +237,12 @@ def sqa(
     
     resampling_flag = False
     # Check if resampling is needed and perform resampling if necessary
-    if sampling_rate != MODEL_SAMPLING_FREQUENCY:
+    if sampling_rate != SQA_MODEL_SAMPLING_FREQUENCY:
         sig = resample_signal(
-            sig=sig, fs_origin=sampling_rate, fs_target=MODEL_SAMPLING_FREQUENCY)
+            sig=sig, fs_origin=sampling_rate, fs_target=SQA_MODEL_SAMPLING_FREQUENCY)
         resampling_flag = True
-        resampling_rate = sampling_rate/MODEL_SAMPLING_FREQUENCY
-        sampling_rate = MODEL_SAMPLING_FREQUENCY
+        resampling_rate = sampling_rate/SQA_MODEL_SAMPLING_FREQUENCY
+        sampling_rate = SQA_MODEL_SAMPLING_FREQUENCY
 
     # Apply bandpass filter if needed
     if filter_signal:

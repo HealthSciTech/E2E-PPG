@@ -21,7 +21,7 @@ MAX_RECONSTRUCTION_LENGTH_SEC = 15
 
 UPSAMPLING_RATE = 2
 
-MODEL_SAMPLING_FREQUENCY = 20
+RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY = 20
 
 MODEL_PATH = "models"
 GAN_MODEL_FILE_NAME = 'GAN_model.pth'
@@ -233,13 +233,13 @@ def reconstruction(
 
     resampling_flag = False
     # Check if resampling is needed and perform resampling if necessary
-    if sampling_rate != MODEL_SAMPLING_FREQUENCY:
+    if sampling_rate != RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY:
         sig = resample_signal(
-            sig=sig, fs_origin=sampling_rate, fs_target=MODEL_SAMPLING_FREQUENCY)
+            sig=sig, fs_origin=sampling_rate, fs_target=RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY)
         resampling_flag = True
-        resampling_rate = sampling_rate/MODEL_SAMPLING_FREQUENCY
+        resampling_rate = sampling_rate/RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY
         sampling_rate_original = sampling_rate
-        sampling_rate = MODEL_SAMPLING_FREQUENCY
+        sampling_rate = RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY
 
     # Apply bandpass filter if needed
     if filter_signal:

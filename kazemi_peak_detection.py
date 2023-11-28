@@ -2,13 +2,13 @@
 
 import numpy as np
 from tensorflow import keras
-from scipy.signal import resample
 import os
 from utils import resample_signal
 
 MODEL_PATH = "models"
 PEAK_DETECTION_MODEL_DIR = "kazemi_peak_detection_model"
-MODEL_SAMPLING_FREQUENCY = 100
+
+KAZEMI_MODEL_SAMPLING_FREQUENCYPLING_FREQUENCY = 100
 
 def normalize(arr):
     """
@@ -158,12 +158,12 @@ def ppg_peaks(signal, sampling_freq, seconds, overlap, minlen):
     
     resampling_flag = False
     # Check if resampling is needed and perform resampling if necessary
-    if sampling_freq != MODEL_SAMPLING_FREQUENCY:
+    if sampling_freq != KAZEMI_MODEL_SAMPLING_FREQUENCYPLING_FREQUENCY:
         signal = resample_signal(
-            sig=signal, fs_origin=sampling_freq, fs_target=MODEL_SAMPLING_FREQUENCY)
+            sig=signal, fs_origin=sampling_freq, fs_target=KAZEMI_MODEL_SAMPLING_FREQUENCYPLING_FREQUENCY)
         resampling_flag = True
-        resampling_rate = sampling_freq/MODEL_SAMPLING_FREQUENCY
-        sampling_freq = MODEL_SAMPLING_FREQUENCY
+        resampling_rate = sampling_freq/KAZEMI_MODEL_SAMPLING_FREQUENCYPLING_FREQUENCY
+        sampling_freq = KAZEMI_MODEL_SAMPLING_FREQUENCYPLING_FREQUENCY
     
     # Split the signal into segments
     segmentized_signal = split_signal(signal, sampling_freq, seconds, overlap, minlen)
