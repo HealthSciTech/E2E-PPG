@@ -1,4 +1,8 @@
-backup/
 dist/
 build/
-E2E_PPG_Pipeline.egg-info/
+E2EPyPPG.egg-info/
+venv/
+__pycache__/
+venv/
+.venv
+setup.py
