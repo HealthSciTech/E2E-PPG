@@ -1,7 +1,7 @@
-[![PyPI](https://img.shields.io/pypi/v/neurokit2.svg?logo=pypi&logoColor=FFE873)](https://pypi.org/project/E2E-PPG-Pipeline/0.1.0/)
-[![PyPI](https://img.shields.io/pypi/pyversions/neurokit2.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/E2E-PPG-Pipeline/0.1.0/)
+[![PyPI](https://img.shields.io/pypi/v/neurokit2.svg?logo=pypi&logoColor=FFE873)](https://pypi.org/project/e2epyppg/)
+[![PyPI](https://img.shields.io/pypi/pyversions/neurokit2.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/e2epyppg/)
 
-# End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction (E2E-PPG)
+# An End-to-End PPG Processing Pipeline for Wearables: From Quality Assessment and Motion Artifacts Removal to HR/HRV Feature Extraction (E2E-PPG)
 
 Welcome to the PPG Signal Processing Pipeline, a comprehensive package designed for extracting accurate Heart Rate (HR) and Heart Rate Variability (HRV) data from Photoplethysmogram (PPG) signals.
 
@@ -60,15 +60,45 @@ Systolic peaks in PPG signals are identified using a deep-learning-based method 
 HR and HRV parameters are computed from the extracted IBIs. A variety of metrics are calculated, including:
 
 - HR: Heart rate
-- MeanNN: Mean of the RR intervals
-- SDNN: Standard deviation of the RR intervals
-- ... (list continues for various HRV metrics)
+- MeanNN: The mean of the RR intervals
+- SDNN: The standard deviation of the RR intervals
+- SDANN: The standard deviation of average RR intervals
+- SDNNI: The mean of the standard deviations of RR intervals
+- RMSSD: The square root of the mean of the squared successive differences between adjacent RR intervals
+- SDSD: The standard deviation of the successive differences between RR intervals
+- CVNN: The standard deviation of the RR intervals (SDNN) divided by the mean of the RR intervals (MeanNN)
+- CVSD: The root mean square of successive differences (RMSSD) divided by the mean of the RR intervals (MeanNN)
+- MedianNN: The median of the RR intervals
+- MadNN: The median absolute deviation of the RR interval
+- MCVNN: The median absolute deviation of the RR intervals (MadNN) divided by the median of the RR intervals (MedianNN)
+- IQRNN: The interquartile range (IQR) of the RR intervals
+- Prc20NN: The 20th percentile of the RR intervals
+- Prc80NN: The 80th percentile of the RR intervals
+- pNN50: The proportion of RR intervals greater than 50ms, out of the total number of RR intervals
+- pNN20: The proportion of RR intervals greater than 20ms, out of the total number of RR intervals
+- MinNN: The minimum of the RR intervals
+- MaxNN: The maximum of the RR intervals
+- TINN: A geometrical parameter of the HRV, or more specifically, the baseline width of the RR intervals distribution obtained by triangular interpolation, where the error of least squares determines the triangle. It is an approximation of the RR interval distribution
+- HTI: The HRV triangular index, measuring the total number of RR intervals divided by the height of the RR intervals histogram
+- ULF: The spectral power of ultra low frequencies (by default, .0 to .0033 Hz)
+- VLF: The spectral power of very low frequencies (by default, .0033 to .04 Hz)
+- LF: The spectral power of low frequencies (by default, .04 to .15 Hz)
+- HF: The spectral power of high frequencies (by default, .15 to .4 Hz)
+- VHF: The spectral power of very high frequencies (by default, .4 to .5 Hz)
+- LFHF: The ratio obtained by dividing the low frequency power by the high frequency power
+- LFn: The normalized low frequency, obtained by dividing the low frequency power by the total power
+- HFn: The normalized high frequency, obtained by dividing the low frequency power by the total power
+- LnHF: The log transformed HF
+- SD1: Standard deviation perpendicular to the line of identity
+- SD2: Standard deviation along the identity line
+- SD1/SD2: ratio of SD1 to SD2. Describes the ratio of short term to long term variations in HRV
+
 
 ## Usage
 
 Install the required packages available in `requirements.txt`. 
 
-See the `Example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `E2E_PPG_Pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
+See the `example.py` file for usage details. Load your PPG signal and call the `HRV_Extraction()` function in `e2e_ppg_pipeline.py` to extract HR and HRV parameters. Define the sample rate and window length for HR and HRV extraction.
 ## Citation
 
 If you use our work in your research, please consider citing the following papers:
@@ -144,12 +174,10 @@ If you use our work in your research, please consider citing the following paper
 
 ## Contributing
 
-We welcome contributions to enhance and extend the capabilities of the PPG Signal Processing Pipeline. Please review our [Contribution Guidelines](CONTRIBUTING.md) for more information.
+We welcome contributions to enhance and extend the capabilities of the PPG Signal Processing Pipeline. 
 
 ## License
 
 This project is licensed under the terms of the [MIT License](LICENSE.md).
 
-## Acknowledgments
 
-We express our gratitude to [mention any third-party libraries or resources] for their invaluable contributions to this project.

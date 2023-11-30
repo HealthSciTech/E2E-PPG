@@ -18,14 +18,14 @@ warnings.filterwarnings("ignore")
 def peak_detection(
         clean_segments: list, 
         sampling_rate: int, 
-        method: str ='nk') -> list:
+        method: str ='kazemi') -> list:
     '''
     Detect peaks in clean PPG segments using specified peak detection method.
     
     Args:
         clean_segments (list): List of clean PPG segments with the specified window length and their starting index.
         sampling_rate: Sampling rate of the PPG signal.
-        method (str): Peak detection method. Valid inputs: 'nk', 'kazemi', and  'heartpy'. The default is 'nk'. (optional)
+        method (str): Peak detection method. Valid inputs: 'nk', 'kazemi', and  'heartpy'. The default is 'kazemi'. (optional)
 
     Return:
         total_peaks (list): List of lists, each containing the detected peaks for a corresponding clean segment.

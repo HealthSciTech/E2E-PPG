@@ -15,7 +15,8 @@ warnings.filterwarnings("ignore")
 def e2e_hrv_extraction(
         input_sig: np.ndarray,
         sampling_rate: int,
-        window_length_sec: int = 60
+        window_length_sec: int = 60,
+        peak_detection_method: str = 'kazemi'
 ) -> pd.DataFrame:
     '''
     End-to-end HR and HRV extraction from an input PPG signal.
@@ -24,6 +25,7 @@ def e2e_hrv_extraction(
         input_sig (np.ndarray): The input PPG signal.
         sampling_rate (int): The sampling rate of the input signal.
         window_length_sec (int): The desired window length for HR and HRV extraction in seconds.
+        peak_detection_method (str): Peak detection method. Valid inputs: 'nk', 'kazemi', and  'heartpy'. The default is 'kazemi'. (optional)
         
     Return:
         hrv_data (pd.Dataframe): A DataFrame containing HRV parameters.
@@ -65,7 +67,7 @@ def e2e_hrv_extraction(
         print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
 
         # Run PPG peak detection
-        peaks = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate)
+        peaks = peak_detection(clean_segments=clean_segments, sampling_rate=sampling_rate, method=peak_detection_method)
 
         # Perform HR and HRV extraction
         hrv_data = hrv_extraction(

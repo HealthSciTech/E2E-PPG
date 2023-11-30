@@ -19,7 +19,8 @@ window_length_sec = 90
 hrv_data = e2e_hrv_extraction(
     input_sig=input_sig,
     sampling_rate=sampling_frequency,
-    window_length_sec=window_length_sec)
+    window_length_sec=window_length_sec,
+    peak_detection_method='kazemi')
 
 # Output file name
 output_file_name = "_".join(['HRV_', file_name])
