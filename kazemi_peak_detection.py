@@ -81,7 +81,7 @@ def Wrapper_function(prediction, raw_signal):
     indeces = []
     ## Finding the peaks index
     while (j < len(test)-3):
-        ## adjustinf the threshhold for the peak detection
+        ## adjusting the threshhold for the peak detection
         if test[j]>= 0.70:
             
             if j< len(test)-15:

@@ -38,8 +38,6 @@ def peak_detection(
         HeartPY method: Van Gent, P., Farah, H., Nes, N., & van Arem, B. (2018, June). 
             Heart rate analysis for human factors: Development and validation of an open source toolkit for noisy naturalistic heart rate data. 
             In Proceedings of the 6th HUMANIST Conference (pp. 173-178). 
-            
-
     '''
     # Initialize a list to store total peaks
     total_peaks = []
@@ -111,7 +109,7 @@ if __name__ == "__main__":
     input_sig = get_data(file_name=file_name)
 
     # Define a window length for clean segments extraction (in seconds)
-    window_length_sec = 90
+    window_length_sec = 60
     
     # Run PPG signal quality assessment.
     clean_ind, noisy_ind = sqa(sig=input_sig, sampling_rate=input_sampling_rate)

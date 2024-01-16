@@ -104,7 +104,7 @@ if __name__ == "__main__":
     input_sig = get_data(file_name=file_name)
 
     # Define a window length for clean segments extraction (in seconds)
-    window_length_sec = 90
+    window_length_sec = 60
 
     # Run PPG signal quality assessment.
     clean_ind, noisy_ind = sqa(sig=input_sig, sampling_rate=input_sampling_rate)

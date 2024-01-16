@@ -28,7 +28,7 @@ def e2e_hrv_extraction(
         peak_detection_method (str): Peak detection method. Valid inputs: 'nk', 'kazemi', and  'heartpy'. The default is 'kazemi'. (optional)
         
     Return:
-        hrv_data (pd.Dataframe): A DataFrame containing HRV parameters.
+        hrv_data (pd.Dataframe): A DataFrame containing HRV parameters.('None' if no clean segments detected in the signal)
 
     '''
     # Apply bandpass filter if needed
@@ -62,6 +62,7 @@ def e2e_hrv_extraction(
     # Check if clean segments are found, if not, print a message
     if len(clean_segments) == 0:
         print('No clean ' + str(window_length_sec) + ' seconds segment was detected in the signal!')
+        return None
     else:
         # Print the number of detected clean segments
         print(str(len(clean_segments)) + ' clean ' + str(window_length_sec) + ' seconds segments was detected in the signal!' )
@@ -78,5 +79,4 @@ def e2e_hrv_extraction(
         print("HR and HRV parameters:")
         print(hrv_data)
         print('Done!')
-
-    return hrv_data
+        return hrv_data

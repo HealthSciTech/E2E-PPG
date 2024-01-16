@@ -12,6 +12,7 @@ from torch import nn
 import __main__
 from utils import find_peaks, resample_signal, get_data, bandpass_filter
 from ppg_sqa import sqa
+import more_itertools as mit
 
 warnings.filterwarnings("ignore")
 
@@ -240,7 +241,28 @@ def reconstruction(
         resampling_rate = sampling_rate/RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY
         sampling_rate_original = sampling_rate
         sampling_rate = RECONSTRUCTION_MODEL_SAMPLING_FREQUENCY
-
+        
+        # Update clean indices according to the new sampling rate
+        clean_indices = [list(range(int(sublist[0]/resampling_rate), int(sublist[-1]/resampling_rate)+1)) for sublist in clean_indices]
+        
+        # Flatten the clean indices
+        clean_indices = [item for sublist in clean_indices for item in sublist]
+        
+        signal_length_res = len(sig)
+        signal_indices_res = list(range(signal_length_res))
+        
+        # The indices that dont exist in the flat list of clean indices indicate noisy indices    
+        noisy_indices_flat = [item for item in signal_indices_res if item not in clean_indices]
+        
+        # Unflat the noisy indices list to separte noisy parts
+        noisy_indices = []
+        for group in mit.consecutive_groups(noisy_indices_flat):
+            noisy_indices.append(list(group))
+            
+    else:
+        # Flatten the clean indices list
+        clean_indices = [item for sublist in clean_indices for item in sublist]
+        
     # Apply bandpass filter if needed
     if filter_signal:
         sig = bandpass_filter(
@@ -355,11 +377,14 @@ def reconstruction(
 
                     # Set the reconstruction flag to True
                     reconstruction_flag = True
-
+                    
                     # Perform the signal quality assessment to ensure that the reconstructed
                     #   signal is not distorted
                     clean_indices, noisy_indices = sqa(
                         sig=ppg_descaled, sampling_rate=sampling_rate, filter_signal=False)
+                    
+                    # Flatten the clean indices list
+                    clean_indices = [item for sublist in clean_indices for item in sublist]
 
     # Check if there was a reconstruction
     if reconstruction_flag:
@@ -367,13 +392,52 @@ def reconstruction(
     else:
         ppg_signal = sig
         
+        
     # If resampling performed, update the reconstructed signal and indices according to the original sampling rate
     if resampling_flag:
-        clean_indices = [int(index * resampling_rate) for index in clean_indices]
-        noisy_indices = [[int(index * resampling_rate) for index in noise] for noise in noisy_indices]
+        
+        # Resample the reconstructed signal according to the original sampling rate
         ppg_signal = resample_signal(
             sig=ppg_signal, fs_origin=sampling_rate, fs_target=sampling_rate_original)
         
+        signal_length = len(ppg_signal)
+        signal_indices = list(range(signal_length))
+        
+        # Unflat the clean indices list to create a list of list of clean indices
+        clean_indices_unflat = []
+        for group in mit.consecutive_groups(clean_indices):
+            clean_indices_unflat.append(list(group))
+            
+        # Update clean indices according to the original sampling rate
+        clean_indices = [list(range(int(sublist[0]*resampling_rate), int(sublist[-1]*resampling_rate)+1)) for sublist in clean_indices_unflat]
+        
+        # Flatten the clean indices
+        clean_indices = [item for sublist in clean_indices for item in sublist]
+        
+        # The indices that dont exist in the flat list of clean indices indicate noisy indices    
+        noisy_indices = [item for item in signal_indices if item not in clean_indices]
+        
+        # Unflat the clean indices list to separte clean parts
+        clean_indices_unflat = []
+        for group in mit.consecutive_groups(clean_indices):
+            clean_indices_unflat.append(list(group))
+        clean_indices = clean_indices_unflat
+        
+        # Unflat the noisy indices list to separte noisy parts
+        noisy_indices_unflat = []
+        for group in mit.consecutive_groups(noisy_indices):
+            noisy_indices_unflat.append(list(group))
+        noisy_indices = noisy_indices_unflat
+        
+            
+    else:
+        # Unflat the clean indices list to separte clean parts
+        clean_indices_unflat = []
+        for group in mit.consecutive_groups(clean_indices):
+            clean_indices_unflat.append(list(group))
+        clean_indices = clean_indices_unflat
+    
+    
     # Return the reconstructed or original PPG signal, along with updated indices
     return ppg_signal, clean_indices, noisy_indices
 
@@ -397,12 +461,14 @@ if __name__ == "__main__":
     # Display results
     print("Analysis Results:")
     print("------------------")
-    print(f"Length of the clean signal after reconstruction (in seconds): {len(clean_ind)/input_sampling_rate:.2f}")
+    print(f"Number of clean parts in the signal after reconstruction: {len(clean_ind)}")
+    if clean_ind:
+        print("Length of each clean part in the signal (in seconds):")
+        for clean_seg in clean_ind:
+            print(f"   - {len(clean_seg)/input_sampling_rate:.2f}")
+                    
     print(f"Number of noisy parts in the signal after reconstruction: {len(noisy_ind)}")
-
-    if len(noisy_ind) > 0:
-        print("Length of each noise in the signal after reconstruction (in seconds):")
+    if noisy_ind:
+        print("Length of each noise in the signal (in seconds):")
         for noise in noisy_ind:
             print(f"   - {len(noise)/input_sampling_rate:.2f}")
-    else:
-        print("The input signal is completely clean!")

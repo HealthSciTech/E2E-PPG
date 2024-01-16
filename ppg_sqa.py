@@ -230,6 +230,10 @@ def sqa(
 
 
     """
+    
+    signal_length = len(sig)
+    signal_indices = list(range(signal_length))
+    
     # Load pre-trained model and normalization scaler
     scaler = joblib.load(os.path.join(MODEL_PATH, SCALER_FILE_NAME))
     model = pickle.load(
@@ -243,12 +247,12 @@ def sqa(
         resampling_flag = True
         resampling_rate = sampling_rate/SQA_MODEL_SAMPLING_FREQUENCY
         sampling_rate = SQA_MODEL_SAMPLING_FREQUENCY
-
+        
     # Apply bandpass filter if needed
     if filter_signal:
         sig = bandpass_filter(
             sig=sig, fs=sampling_rate, lowcut=0.5, highcut=3)
-
+        
     # Generate indices for the PPG signal
     sig_indices = np.arange(len(sig))
 
@@ -261,6 +265,8 @@ def sqa(
         segment_size=SEGMENT_SIZE,
         shift_size=SHIFTING_SIZE,
     )
+    
+    
 
     # Initialize lists to store all reliable and unreliable segments
     reliable_segments_all = []
@@ -288,27 +294,45 @@ def sqa(
         else:
             unreliable_segments_all.append(segment)
             unreliable_indices_all.append(segments_indices[idx])
-
-    # Generate flatten lists of reliable indices as clean indices
-    clean_indices = list(set([item for segment in reliable_indices_all for item in segment]))
-
-    # The indices that dont exist in the flat list of clean indices indicate unreliable indices
-    unreliable_indices = [item for item in sig_indices if item not in clean_indices]
-
-    # Unflat the unreliable_indices list to separte noisy parts
-    noisy_indices = []
-    for group in mit.consecutive_groups(unreliable_indices):
-        noisy_indices.append(list(group))
-    noisy_indices = [noisy_indices[i] for i in range(
-        len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
+    
+    # Generate a flatten list of clean indices by aggregating all reliable segments' indices
+    clean_indices_flat = sorted(set([item for segment in reliable_indices_all for item in segment]))
+    
     
     # If resampling performed, update indices according to the original sampling rate
     if resampling_flag:
-        clean_indices = [int(index * resampling_rate) for index in clean_indices]
-        noisy_indices = [[int(index * resampling_rate) for index in noise] for noise in noisy_indices]
+        
+        # Unflat the clean indices list to create a list of list of clean indices
+        clean_indices = []
+        for group in mit.consecutive_groups(clean_indices_flat):
+            clean_indices.append(list(group))
+            
+        # Update clean indices according to the original sampling rate
+        clean_indices = [list(range(int(sublist[0]*resampling_rate), int(sublist[-1]*resampling_rate)+1)) for sublist in clean_indices]
+        
+        # Flatten the clean indices
+        clean_indices_flat = [item for sublist in clean_indices for item in sublist]
+        
+        
+    # The indices that dont exist in the flat list of clean indices indicate noisy indices    
+    noisy_indices_flat = [item for item in signal_indices if item not in clean_indices_flat]
+    
+    # Unflat the clean indices list to separte clean parts
+    clean_indices = []
+    for group in mit.consecutive_groups(clean_indices_flat):
+        clean_indices.append(list(group))
+    
+    # Unflat the noisy indices list to separte noisy parts
+    noisy_indices = []
+    for group in mit.consecutive_groups(noisy_indices_flat):
+        noisy_indices.append(list(group))
+    # Discard the indices that have not been quality assessed due to be less than shifting size (indices at the end of the signal)
+    noisy_indices = [noisy_indices[i] for i in range(
+        len(noisy_indices)) if len(noisy_indices[i]) > SHIFTING_SIZE]
 
 
     return clean_indices, noisy_indices
+
 
 
 if __name__ == "__main__":
@@ -323,13 +347,16 @@ if __name__ == "__main__":
     # Display results
     print("Analysis Results:")
     print("------------------")
-    print(f"Length of the clean signal (in seconds): {len(clean_ind)/input_sampling_rate:.2f}")
+    print(f"Number of clean parts in the signal: {len(clean_ind)}")
+    if clean_ind:
+        print("Length of each clean part in the signal (in seconds):")
+        for clean_seg in clean_ind:
+            print(f"   - {len(clean_seg)/input_sampling_rate:.2f}")
+            
     print(f"Number of noisy parts in the signal: {len(noisy_ind)}")
-
-    if len(noisy_ind) > 0:
+    if noisy_ind:
         print("Length of each noise in the signal (in seconds):")
         for noise in noisy_ind:
             print(f"   - {len(noise)/input_sampling_rate:.2f}")
-    else:
-        print("The input signal is completely clean!")
+
 

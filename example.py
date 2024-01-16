@@ -13,7 +13,7 @@ sampling_frequency = 20
 input_sig = get_data(file_name=file_name)
 
 # Set the window length for HR and HRV extraction in seconds
-window_length_sec = 90
+window_length_sec = 60
 
 # Extract HRV parameters from the input PPG signal
 hrv_data = e2e_hrv_extraction(
@@ -22,8 +22,9 @@ hrv_data = e2e_hrv_extraction(
     window_length_sec=window_length_sec,
     peak_detection_method='kazemi')
 
-# Output file name
-output_file_name = "_".join(['HRV_', file_name])
-
-# Save HRV data to a CSV file
-hrv_data.to_csv(os.path.join('data', output_file_name), index=False)
+if hrv_data is not None:
+    # Output file name
+    output_file_name = "_".join(['HRV_', file_name])
+    
+    # Save HRV data to a CSV file
+    hrv_data.to_csv(os.path.join('data', output_file_name), index=False)
